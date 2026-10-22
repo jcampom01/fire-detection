@@ -1,0 +1,12 @@
+{
+    "data_root": "data/original_dataset",
+    "output_root": "data/clahe_dataset",
+    "splits": ["train", "val", "test"],
+    "clahe": {
+        "clip_limit": 2.0,
+        "tile_grid": 8
+    },
+    "jpeg_quality": 95,
+    "workers": null,
+    "overwrite": false
+}
