@@ -1,0 +1,8 @@
+{
+    "data_roots": ["data/original_dataset", "data/clahe_dataset"],
+    "sizes": [224, 380],
+    "splits": ["train", "val", "test"],
+    "jpeg_quality": 95,
+    "workers": null,
+    "overwrite": false
+}
