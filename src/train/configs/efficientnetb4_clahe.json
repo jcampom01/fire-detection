@@ -1,0 +1,35 @@
+{
+    "experiment": "efficientnetb4_clahe",
+    "model": "efficientnetb4",
+    "dataset": "clahe",
+    "data": {
+        "labels_dir": "data/classification_labels",
+        "image_root": "data/clahe_dataset_380"
+    },
+    "output_dir": "results",
+    "image_size": 380,
+    "batch_size": 12,
+    "seed": 42,
+    "mixed_precision": true,
+    "head": {
+        "dropout": 0.3
+    },
+    "phase1": {
+        "epochs": 10,
+        "lr": 0.001,
+        "patience": 3
+    },
+    "phase2": {
+        "epochs": 30,
+        "lr": 1e-05,
+        "patience": 5,
+        "unfreeze_fraction": 0.3,
+        "reduce_lr_factor": 0.2,
+        "reduce_lr_patience": 2
+    },
+    "monitor": "val_pr_auc",
+    "threshold": {
+        "target_recall": 0.95
+    },
+    "debug_max_images": null
+}

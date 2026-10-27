@@ -226,3 +226,7 @@ __marimo__/
 *.csv
 *.txt
 *.jpg
+
+# Trained models
+*.keras
+*.weights.h5

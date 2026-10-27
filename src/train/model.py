@@ -43,7 +43,10 @@ def unfreeze_top(backbone, fraction):
 
 
 def compile_model(model, lr):
+    # No XLA: compiling the fine-tuning step of the bigger backbones (e.g. EfficientNetB4 at 380px)
+    # needs more host RAM than WSL has, and the process gets killed by the OOM killer.
     model.compile(
+        jit_compile=False,
         optimizer=keras.optimizers.Adam(lr),
         loss="binary_crossentropy",
         metrics=[keras.metrics.BinaryAccuracy(name="accuracy"),
