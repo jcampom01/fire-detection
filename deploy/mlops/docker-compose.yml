@@ -76,6 +76,18 @@ services:
       retries: 10
       start_period: 30s
 
+  # --- DB web UI (optional): docker compose --profile tools up -d adminer ---
+  adminer:
+    image: adminer:6.2.0
+    profiles: [tools]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    ports:
+      - "127.0.0.1:8081:8080"  # web UI, only from this machine
+
 volumes:
   postgres_data:
   rustfs_data:

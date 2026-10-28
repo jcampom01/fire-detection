@@ -77,6 +77,21 @@ Interfaces:
 | `docker compose down` | borra los contenedores; **los datos siguen en los volúmenes** |
 | `docker compose up -d --build mlflow` | reconstruir la imagen tras cambiar el Dockerfile (sin `--build` usa la vieja) |
 | `docker compose down -v` | ⚠️ borra también los volúmenes: se pierden todos los runs y modelos |
+| `docker compose --profile tools up -d adminer` | arranca Adminer (UI de la base de datos) en http://localhost:8081 |
+| `docker compose --profile tools stop adminer` | lo para |
+| `docker compose exec postgres psql -U mlflow -d mlflow` | consola SQL dentro del contenedor (`\dt`, `\d tabla`, `\q`) |
+
+## Ver la base de datos
+
+Solo para consultar: las tablas son de MLflow y los cambios se hacen siempre a través de MLflow.
+
+- **Adminer** (perfil `tools`): http://localhost:8081 → Sistema **PostgreSQL**, servidor `postgres`, usuario `mlflow`,
+  contraseña `POSTGRES_PASSWORD` del `.env`, base de datos `mlflow`.
+- **psql:** `docker compose exec postgres psql -U mlflow -d mlflow`. Sin contraseña, porque conecta desde dentro del contenedor.
+
+De las 65 tablas, las relevantes son `experiments`, `runs`, `params`, `metrics`, `latest_metrics`, `tags`,
+`registered_models`, `model_versions` y `registered_model_aliases`. El resto son funciones de IA generativa de MLflow 3
+(trazas, evaluaciones, endpoints) que no se usan.
 
 ## Decisiones
 
@@ -84,6 +99,8 @@ Interfaces:
   Sin volumen, las imágenes de Postgres y RustFS crean uno anónimo que se pierde con `down` + `up`.
 - **Solo se publican a `127.0.0.1`** la interfaz de MLflow y la consola de RustFS. Postgres y la API S3 quedan en la red interna.
 - **Versiones fijas** de todas las imágenes y paquetes, igual que en `requirements.txt`.
+- **Herramientas de apoyo en el perfil `tools`** (Adminer): no forman parte de la plataforma y no arrancan con un `up` normal.
+  Adminer entra por la red interna, así que Postgres sigue sin puerto publicado.
 - **El bucket se crea a mano** con un script, no como servicio del compose: es un paso único de preparación.
   El script usa `aws-cli` en un contenedor dentro de la red de compose, así que no hay que instalar nada en el host.
 - **`MLFLOW_SERVER_ALLOWED_HOSTS`** incluye `mlflow:*` para que otros contenedores (el futuro puller) puedan llamar a
