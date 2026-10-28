@@ -74,7 +74,7 @@ el pipeline `tf.data` usara varios GB de RAM. Redimensionar una sola vez a disco
 - Se redimensiona a `size × size` **sin mantener la relación de aspecto**, igual que `tf.image.resize` en el entrenamiento,
   así que es equivalente a entrenar con las imágenes originales.
 - Interpolación `INTER_AREA` (antialiasing al reducir).
-- 224 px para MobileNetV3, EfficientNetB0 y ConvNeXt-Tiny. 380 px para EfficientNetB4 (su resolución nativa).
+- 224 px para MobileNetV3. 380 px para EfficientNetB4 (su resolución nativa).
 - Las etiquetas YOLO se copian tal cual porque usan coordenadas normalizadas.
 
 | dataset | tamaño en disco |

@@ -1,0 +1,20 @@
+# Direct dependencies (Python 3.12). Full lock: requirements-lock.txt
+
+# --- Deep learning ---
+tensorflow[and-cuda]==2.21.0
+keras==3.15.1
+
+# --- Data and image ---
+numpy==2.5.4
+pandas==3.0.6
+opencv-python-headless==5.0.0.93
+scikit-learn==1.9.1
+scipy==1.18.1
+
+# --- Plots and utilities ---
+matplotlib==3.11.2
+tqdm==4.70.1
+
+# --- Notebooks ---
+ipykernel==7.4.0
+Jinja2==3.1.6    # pandas df.style in compare_results.ipynb

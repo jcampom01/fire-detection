@@ -2,6 +2,8 @@
 
 > Estado: **planificado, sin implementar**. Primer modelo candidato: `mobilenetv3large_clahe`.
 
+Diagramas de arquitectura (API y servidor de modelos en contenedores separados): [deployment_architecture.drawio](deployment_architecture.drawio).
+
 ## Qué incluye el modelo y qué no
 
 | | ¿dentro de `model.keras`? |
@@ -66,7 +68,7 @@ son capas finas encima, así se evita que el entrenamiento y el servicio procese
 
 ```
  ENTRENAMIENTO ──► MLflow Tracking + Model Registry (alias @staging / @production)
-                   artefactos en MinIO (= S3)
+                   artefactos en RustFS (= S3)
                           │  CI/CD (GitHub Actions): tests → build imagen → push → deploy
                           ▼
  Cámaras simuladas ──► Cluster K8s (kind): Ingress → Service → Pods FastAPI (HPA, canary v2)
@@ -77,7 +79,7 @@ son capas finas encima, así se evita que el entrenamiento y el servicio procese
 
 | local | AWS | GCP | Azure |
 |---|---|---|---|
-| MinIO | S3 | Cloud Storage | Blob Storage |
+| RustFS | S3 | Cloud Storage | Blob Storage |
 | MLflow | SageMaker Model Registry | Vertex AI Model Registry | Azure ML |
 | registry local / GHCR | ECR | Artifact Registry | ACR |
 | kind / minikube | EKS | GKE | AKS |
@@ -87,7 +89,7 @@ son capas finas encima, así se evita que el entrenamiento y el servicio procese
 ## Hoja de ruta
 
 1. **Servicio en contenedor:** `Predictor` + FastAPI + Dockerfile (TFLite/ONNX en CPU). Prueba de extremo a extremo con el test.
-2. **Registro de modelos:** MLflow + MinIO (docker-compose). `train.py` registra cada modelo y la API carga `models:/fire-detector@production`.
+2. **Registro de modelos:** MLflow + Postgres + RustFS (docker-compose, ver [06_mlops.md](06_mlops.md)). `train.py` registra cada modelo y la API carga `models:/fire-detector@production`.
 3. **Observabilidad:** Prometheus + Grafana, simulador de cámaras y Locust.
 4. **Kubernetes:** kind, Deployment, Service, HPA, canary MobileNet v1 frente a B4 v2.
 5. **CI/CD:** GitHub Actions con un umbral mínimo de PR-AUC para dejar pasar el modelo.

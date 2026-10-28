@@ -35,9 +35,9 @@ así que reciben **RGB en el rango 0–255**.
 | modelo | resolución | batch | parámetros |
 |---|---:|---:|---:|
 | MobileNetV3-Large | 224 | 64 | 3,0 M |
-| EfficientNetB0 | 224 | 64 | ~4 M |
-| ConvNeXt-Tiny | 224 | 32 | ~28 M |
 | EfficientNetB4 | 380 | 12 | 17,7 M |
+
+`model.py` también admite `efficientnetb0` y `convnexttiny`, pero se descartaron y no tienen config.
 
 **Cabeza:** `backbone(training=False)` → `GlobalAveragePooling2D` → `Dropout(0.3)` → `Dense(1, sigmoid, float32)`.
 `training=False` mantiene las BatchNorm en modo inferencia también cuando se descongela el backbone.
@@ -45,7 +45,7 @@ así que reciben **RGB en el rango 0–255**.
 ## Experimentos
 
 Uno por cada combinación modelo × dataset, con un JSON en [configs/](../src/train/configs/):
-`{mobilenetv3large, efficientnetb0, convnexttiny, efficientnetb4} × {original, clahe}`, 8 en total.
+`{mobilenetv3large, efficientnetb4} × {original, clahe}`, 4 en total.
 
 ## Entrenamiento en dos fases
 
@@ -98,5 +98,8 @@ Para inferencia no hace falta, y desaparece al exportar.
 
 TensorFlow 2.21, Keras 3.15, GPU RTX 3070 (8 GB), WSL2 con ~7,7 GiB de RAM.
 
-> Nota: `requirements.txt` está vacío y además `.gitignore` ignora `*.txt`, así que no se versionaría.
-> Conviene rellenarlo (`pip freeze`) y añadir una excepción `!requirements.txt`.
+Dependencias:
+
+- `requirements.txt`: dependencias directas, con las versiones fijadas a las usadas para entrenar.
+- `requirements-lock.txt`: el entorno completo (`pip freeze`). Sirve para reproducirlo exactamente:
+  `pip install -r requirements-lock.txt`.

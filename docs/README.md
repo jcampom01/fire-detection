@@ -10,6 +10,9 @@ como base para practicar un despliegue MLOps completo.
 | [03_training.md](03_training.md) | Pipeline de entrenamiento, modelos, configs y artefactos generados |
 | [04_results.md](04_results.md) | Resultados obtenidos y comparación entre modelos |
 | [05_deployment.md](05_deployment.md) | Arquitectura de inferencia y plan de despliegue MLOps |
+| [06_mlops.md](06_mlops.md) | Plataforma MLOps: MLflow + Postgres + RustFS en Docker |
+| [ports.md](ports.md) | Puertos en uso y conexiones entre servicios |
+| [tools.md](tools.md) | Herramientas del proyecto y para qué sirve cada una |
 
 ## Flujo general
 
@@ -39,5 +42,6 @@ src/
 └── train/                            entrenamiento, evaluación y comparación
     └── configs/                      un JSON por experimento (modelo × dataset)
 results/<experimento>/                salidas de cada entrenamiento
+deploy/mlops/                         plataforma MLOps (docker-compose: MLflow, Postgres, RustFS)
 docs/                                 esta documentación
 ```

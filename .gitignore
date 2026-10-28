@@ -225,8 +225,12 @@ __marimo__/
 # Data files
 *.csv
 *.txt
+!requirements*.txt
 *.jpg
 
 # Trained models
 *.keras
 *.weights.h5
+
+# Result folder
+results/

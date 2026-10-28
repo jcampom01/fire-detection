@@ -2,8 +2,8 @@
 
 Análisis completo en [compare_results.ipynb](../src/train/compare_results.ipynb). Datos en `results/<experimento>/metrics.json`.
 
-**Estado:** entrenados `mobilenetv3large_clahe` y `efficientnetb4_clahe`. Pendientes: las versiones `original`,
-EfficientNetB0 y ConvNeXt-Tiny.
+**Estado:** entrenados `mobilenetv3large_clahe` y `efficientnetb4_clahe`. Pendientes: `mobilenetv3large_original` y
+`efficientnetb4_original`.
 
 ## Métricas en test (umbral elegido en val para recall ≥ 95 %)
 
@@ -61,4 +61,4 @@ peor de val a test y lo deja en un punto más conservador. Si se fija el mismo r
   (CPU, tiempo real, varias réplicas).
 - Lección: comparar modelos con su umbral de val aplicado a test mezcla la calidad del modelo con lo bien que se
   traslada el umbral. Hay que comparar con AUC o en el mismo punto de operación.
-- Falta confirmar si **CLAHE aporta** frente a `original` (McNemar y bootstrap en el notebook) cuando estén las 8 ejecuciones.
+- Falta confirmar si **CLAHE aporta** frente a `original` (McNemar y bootstrap en el notebook) cuando estén las 4 ejecuciones.
