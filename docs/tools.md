@@ -9,6 +9,7 @@
 | **Dockerfile** | Receta para construir una imagen propia; aquí, la de MLflow con drivers extra. |
 | **PostgreSQL** | Base de datos relacional donde MLflow guarda los metadatos: runs, params, métricas, versiones y alias. |
 | **RustFS** | Almacenamiento de objetos compatible con S3 donde MLflow guarda los ficheros (modelos, png, csv). Sustituye a MinIO. |
+| **DVC** | Versiona los datasets: guarda los ficheros por hash en el bucket `datasets` y deja en git un `.dvc` pequeño con la versión. |
 | **MLflow** | Tracking de experimentos y registro de modelos, con API e interfaz web. |
 | **Adminer** | Interfaz web para la base de datos; permite ver las tablas de MLflow sin publicar el puerto de Postgres. Perfil `tools`. |
 | **aws-cli** | Cliente oficial de AWS para línea de comandos; aquí, para crear buckets en RustFS a través de la API S3. |
