@@ -1,0 +1,7 @@
+[core]
+    analytics = false
+    remote = storage
+['remote "storage"']
+    url = s3://datasets/fire-detection
+    endpointurl = http://localhost:9000
+    region = us-east-1

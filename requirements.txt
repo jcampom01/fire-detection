@@ -15,6 +15,9 @@ scipy==1.18.1
 matplotlib==3.11.2
 tqdm==4.70.1
 
+# --- MLOps ---
+dvc[s3]==3.67.1
+
 # --- Notebooks ---
 ipykernel==7.4.0
 Jinja2==3.1.6    # pandas df.style in compare_results.ipynb

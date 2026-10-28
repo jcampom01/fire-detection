@@ -8,7 +8,7 @@ Stack `deploy/mlops` (proyecto Compose `fire-mlops`, red `fire-mlops_default`).
 |---|---:|---|---|---|
 | `mlflow` | 5000 | HTTP | `127.0.0.1:5000` | UI y API REST: http://localhost:5000 · health: `/health` |
 | `rustfs` | 9001 | HTTP | `127.0.0.1:9001` | consola web: http://localhost:9001/rustfs/console/ |
-| `rustfs` | 9000 | HTTP (API S3) | no, solo red interna | `http://rustfs:9000` · health: `/health` |
+| `rustfs` | 9000 | HTTP (API S3) | `127.0.0.1:9000` | contenedores: `http://rustfs:9000` · host (DVC): `http://localhost:9000` · health: `/health` |
 | `adminer` (perfil `tools`) | 8081 → 8080 | HTTP | `127.0.0.1:8081` | UI de la base de datos: http://localhost:8081 |
 | `postgres` | 5432 | PostgreSQL | no, solo red interna | `postgres:5432`, base de datos `mlflow` |
 
@@ -25,6 +25,7 @@ Stack `deploy/mlops` (proyecto Compose `fire-mlops`, red `fire-mlops_default`).
 | `mlflow` | `postgres` | `postgresql://…@postgres:5432/mlflow` | metadatos |
 | `mlflow` | `rustfs` | `MLFLOW_S3_ENDPOINT_URL=http://rustfs:9000` | ficheros, bucket `mlflow` |
 | `create_bucket.sh` (contenedor `aws-cli` temporal) | `rustfs` | `http://rustfs:9000` dentro de la red | crear buckets |
+| `dvc` (host) | `rustfs` | `http://localhost:9000`, bucket `datasets` | subir y bajar versiones del dataset (cliente S3 directo, sin proxy) |
 | navegador (host) | `adminer` | `http://localhost:8081` | inspeccionar las tablas de MLflow |
 | `adminer` | `postgres` | `postgres:5432` dentro de la red | consultas (Postgres sigue sin puerto publicado) |
 

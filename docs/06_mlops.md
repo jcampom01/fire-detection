@@ -36,7 +36,8 @@ train.py (host) ──► MLflow :5000 ──┬──► Postgres :5432   metad
 | `mlflow` | `fire-mlops/mlflow:3.17.2` (propia) | nada: sin estado | — |
 
 - MLflow arranca con `--serve-artifacts`: hace de **intermediario** hacia RustFS. Los clientes solo hablan con MLflow,
-  así que el host no necesita credenciales de S3 ni el puerto 9000.
+  así que los clientes de MLflow no necesitan credenciales de S3. El puerto 9000 sí se publica (en `127.0.0.1`)
+  para DVC, que es un cliente S3 directo y guarda los datasets en el bucket `datasets`.
 - `depends_on` + healthchecks: MLflow no arranca hasta que Postgres y RustFS están `healthy`.
 - Puertos y conexiones: [ports.md](ports.md). Herramientas: [tools.md](tools.md).
 
