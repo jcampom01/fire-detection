@@ -4,7 +4,6 @@ services:
   # --- Metadata store: runs, params, metrics, model versions, aliases ---
   postgres:
     image: postgres:17-alpine
-    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -21,7 +20,6 @@ services:
   # --- Artifact store (S3 API): models, meta.json, plots, predictions ---
   rustfs:
     image: rustfs/rustfs:1.0.4
-    restart: unless-stopped
     environment:
       RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY}
       RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY}
@@ -47,7 +45,6 @@ services:
   mlflow:
     build: ./mlflow
     image: fire-mlops/mlflow:3.17.2
-    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy

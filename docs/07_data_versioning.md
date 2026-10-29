@@ -1,7 +1,7 @@
 # 07 — Versionado de datos con DVC
 
 > Estado: DVC inicializado, remote `storage` configurado (RustFS, bucket `datasets`) y `data/original_dataset`
-> versionado. Pendiente: comprobar la recuperación con `dvc pull`, el pipeline de preprocesado (`dvc.yaml`) y
+> versionado y recuperación comprobada con `dvc pull`. Pendiente: el pipeline de preprocesado (`dvc.yaml`) y
 > registrar en MLflow la versión de datos de cada run.
 
 ## Por qué
@@ -305,6 +305,37 @@ git commit -m "Track original dataset with DVC"
 
 Tras el push, el prefijo `fire-detection/files/md5/` aparece en la consola de RustFS (http://localhost:9001/rustfs/console/).
 
+### D.4 — Prueba de recuperación
+
+Antes de borrar se movieron la copia de trabajo y la caché a `~/containers/_dvc_test_backup/` (mismo disco, mover
+es instantáneo), para poder compararlas después.
+
+**A. Sin copia de trabajo → recuperar de la caché local (sin red):**
+
+```bash
+dvc status       # deleted: data/original_dataset
+dvc checkout     # 24 s
+```
+
+**B. Sin copia de trabajo ni caché → recuperar del bucket** (simula una máquina nueva que solo tiene el repo):
+
+```bash
+dvc status -c    # todo "deleted" en local, existe en el remote
+dvc pull         # 1 min 22 s: "33208 files fetched and 43054 files added"
+```
+
+`fetched` son los objetos distintos descargados a la caché; `added` son los ficheros colocados en `data/` con su
+nombre original (el objeto vacío se copia 9.838 veces).
+
+| comprobación | resultado |
+|---|---|
+| `dvc status` / `dvc status -c` | `up to date` / `in sync` |
+| caché reconstruida | 3,0 GB, 33.209 objetos |
+| `diff -rq` con el original | idénticos byte a byte |
+
+En una máquina nueva: `git clone` → `pip install -r requirements-lock.txt` → credenciales en `.dvc/config.local`
+→ `dvc pull`.
+
 ## Comandos de referencia
 
 | comando | qué hace |
@@ -320,6 +351,5 @@ Tras el push, el prefijo `fire-detection/files/md5/` aparece en la consola de Ru
 
 ## Siguientes pasos
 
-- **D.4** — Prueba de recuperación: borrar la copia local y recuperarla con `dvc pull`.
 - **D.5** — Pipeline `dvc.yaml` con `prepare_labels.py`, `clahe_preprocess.py` y `resize_dataset.py`, y `dvc repro`.
 - **D.6** — Cada run de MLflow registra el commit de git, el hash de los datos y el propio `.dvc` como artefacto.

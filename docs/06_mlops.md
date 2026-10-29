@@ -100,6 +100,9 @@ De las 65 tablas, las relevantes son `experiments`, `runs`, `params`, `metrics`,
   Sin volumen, las imágenes de Postgres y RustFS crean uno anónimo que se pierde con `down` + `up`.
 - **Solo se publican a `127.0.0.1`** la interfaz de MLflow y la consola de RustFS. Postgres y la API S3 quedan en la red interna.
 - **Versiones fijas** de todas las imágenes y paquetes, igual que en `requirements.txt`.
+- **Sin política `restart`** (por defecto `no`): el stack solo funciona cuando se levanta a mano con
+  `docker compose up -d`. Con `unless-stopped`, los contenedores volvían a arrancar al encender el PC. En un servidor
+  sí se usaría `unless-stopped` para que el servicio sobreviva a reinicios.
 - **Herramientas de apoyo en el perfil `tools`** (Adminer): no forman parte de la plataforma y no arrancan con un `up` normal.
   Adminer entra por la red interna, así que Postgres sigue sin puerto publicado.
 - **El bucket se crea a mano** con un script, no como servicio del compose: es un paso único de preparación.
