@@ -11,6 +11,8 @@
 | **RustFS** | Almacenamiento de objetos compatible con S3 donde MLflow guarda los ficheros (modelos, png, csv). Sustituye a MinIO. |
 | **DVC** | Versiona los datasets: guarda los ficheros por hash en el bucket `datasets` y deja en git un `.dvc` pequeño con la versión. |
 | **MLflow** | Tracking de experimentos y registro de modelos, con API e interfaz web. |
+| **mlflow-skinny** | Cliente de MLflow sin servidor; lo usa el código del host (`.venv`) para enviar runs al servidor. |
+| **GitPython** | Lectura del repo git desde Python; MLflow la usa para guardar el commit de cada run. |
 | **Adminer** | Interfaz web para la base de datos; permite ver las tablas de MLflow sin publicar el puerto de Postgres. Perfil `tools`. |
 | **aws-cli** | Cliente oficial de AWS para línea de comandos; aquí, para crear buckets en RustFS a través de la API S3. |
 | **psycopg** | Driver de Python para PostgreSQL; lo usa MLflow para conectarse a la base de datos. |

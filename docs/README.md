@@ -12,6 +12,7 @@ como base para practicar un despliegue MLOps completo.
 | [05_deployment.md](05_deployment.md) | Arquitectura de inferencia y plan de despliegue MLOps |
 | [06_mlops.md](06_mlops.md) | Plataforma MLOps: MLflow + Postgres + RustFS en Docker |
 | [07_data_versioning.md](07_data_versioning.md) | Versionado de datos con DVC: conceptos y pasos realizados |
+| [08_experiment_tracking.md](08_experiment_tracking.md) | Tracking de experimentos con MLflow: conceptos y prueba de humo |
 | [ports.md](ports.md) | Puertos en uso y conexiones entre servicios |
 | [tools.md](tools.md) | Herramientas del proyecto y para qué sirve cada una |
 

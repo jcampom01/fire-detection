@@ -1,7 +1,8 @@
 # 06 — Plataforma MLOps (tracking y registro de modelos)
 
-> Estado: **infraestructura levantada** (Postgres + RustFS + MLflow). Pendiente: prueba de extremo a extremo
-> desde el host, integración con `train.py`, importar los modelos ya entrenados y gate de promoción.
+> Estado: **infraestructura levantada** (Postgres + RustFS + MLflow) y comprobada de extremo a extremo desde el host.
+> Pendiente: integración con `train.py`, importar los modelos ya entrenados y gate de promoción.
+> Conceptos de MLflow y prueba de humo: [08_experiment_tracking.md](08_experiment_tracking.md).
 
 ## Qué resuelve
 
@@ -82,6 +83,7 @@ Interfaces:
 | `docker compose --profile tools up -d adminer` | arranca Adminer (UI de la base de datos) en http://localhost:8081 |
 | `docker compose --profile tools stop adminer` | lo para |
 | `docker compose exec postgres psql -U mlflow -d mlflow` | consola SQL dentro del contenedor (`\dt`, `\d tabla`, `\q`) |
+| `mlflow gc` dentro del contenedor | ⚠️ borrado definitivo de runs/experimentos en `deleted`: ver [08](08_experiment_tracking.md#m3--borrado) |
 
 ## Ver la base de datos
 
@@ -145,7 +147,7 @@ El código cliente (`mlflow.log_*`, `mlflow.register_model`) es el mismo en todo
 
 ## Siguientes pasos
 
-1. Prueba de extremo a extremo: un run de prueba desde el host que aparezca en la UI, en RustFS y en Postgres.
+1. ~~Prueba de extremo a extremo desde el host~~ → hecha: [08_experiment_tracking.md](08_experiment_tracking.md) (M.2–M.3).
 2. Integrar `train.py` con MLflow: params, métricas por epoch, artefactos y registro de la versión (`@staging`).
 3. Importar `mobilenetv3large_clahe` y `efficientnetb4_clahe` sin reentrenar.
 4. Alias y `promote.py` (gate de promoción).
