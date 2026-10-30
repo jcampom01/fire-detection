@@ -2,7 +2,7 @@
 
 > Estado: **planificado, sin implementar**. Primer modelo candidato: `mobilenetv3large_clahe`.
 
-Diagramas de arquitectura (API y servidor de modelos en contenedores separados): [deployment_architecture.drawio](deployment_architecture.drawio).
+Diagrama del despliegue: pendiente, se hará al implementarlo. Arquitectura MLOps actual: [mlops_architecture.drawio](mlops_architecture.drawio).
 
 ## Qué incluye el modelo y qué no
 

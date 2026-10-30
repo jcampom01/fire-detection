@@ -20,7 +20,7 @@
 | **pandas / NumPy / scikit-learn / SciPy** | Datos tabulares, cálculo numérico, métricas y tests estadísticos. |
 | **Matplotlib** | Gráficas de entrenamiento y evaluación. |
 | **Jupyter (ipykernel)** | Notebooks de EDA y comparación de resultados. |
-| **draw.io** | Diagramas de arquitectura ([deployment_architecture.drawio](deployment_architecture.drawio)). |
+| **draw.io** | Diagramas de arquitectura ([mlops_architecture.drawio](mlops_architecture.drawio)). |
 
 ## Previstas
 

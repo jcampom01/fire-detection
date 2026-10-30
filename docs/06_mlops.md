@@ -40,6 +40,7 @@ train.py (host) ──► MLflow :5000 ──┬──► Postgres :5432   metad
   para DVC, que es un cliente S3 directo y guarda los datasets en el bucket `datasets`.
 - `depends_on` + healthchecks: MLflow no arranca hasta que Postgres y RustFS están `healthy`.
 - Puertos y conexiones: [ports.md](ports.md). Herramientas: [tools.md](tools.md).
+  Diagrama conceptual: [mlops_architecture.drawio](mlops_architecture.drawio).
 
 ## Ficheros
 

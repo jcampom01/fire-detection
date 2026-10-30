@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" agent="claude" version="24.0.0">
+  <diagram name="Arquitectura MLOps" id="mlops">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1240" pageHeight="800" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="Arquitectura MLOps — Fire Detection" style="text;html=1;align=left;verticalAlign=middle;fontSize=20;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="600" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Training band: the process that uses the tools -->
+        <mxCell id="training" value="ENTRENAMIENTO" style="rounded=1;arcSize=5;whiteSpace=wrap;html=1;fillColor=#f8f5fb;strokeColor=#9673a6;verticalAlign=top;align=left;spacingLeft=12;fontStyle=1;fontSize=14;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="70" width="1160" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="train" value="&lt;b&gt;train.py&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;TF · GPU&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="540" y="100" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="results" value="results/" style="shape=folder;tabWidth=40;tabHeight=12;tabPosition=left;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="780" y="105" width="110" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Lanes: what is versioned -->
+        <mxCell id="lane-code" value="CÓDIGO" style="rounded=1;arcSize=3;whiteSpace=wrap;html=1;fillColor=#f2f7fd;strokeColor=#6c8ebf;verticalAlign=top;fontStyle=1;fontSize=14;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="230" width="340" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="lane-data" value="DATOS" style="rounded=1;arcSize=3;whiteSpace=wrap;html=1;fillColor=#f3f9f2;strokeColor=#82b366;verticalAlign=top;fontStyle=1;fontSize=14;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="450" y="230" width="340" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="lane-exp" value="EXPERIMENTOS Y MODELOS" style="rounded=1;arcSize=3;whiteSpace=wrap;html=1;fillColor=#fff8f0;strokeColor=#d79b00;verticalAlign=top;fontStyle=1;fontSize=14;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="860" y="230" width="340" height="200" as="geometry" />
+        </mxCell>
+
+        <!-- Tools -->
+        <mxCell id="git" value="&lt;b&gt;Git&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="130" y="300" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="dvc" value="&lt;b&gt;DVC&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="540" y="300" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="mlflow" value="&lt;b&gt;MLflow&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;TODO&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontColor=#888888;dashed=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="950" y="300" width="160" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- External storage band: where files end up -->
+        <mxCell id="storage" value="ALMACENAMIENTO (servicios externos)" style="rounded=1;arcSize=3;whiteSpace=wrap;html=1;fillColor=#f7f7f7;strokeColor=#666666;verticalAlign=top;fontStyle=1;fontSize=14;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="510" width="1160" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="github" value="&lt;b&gt;GitHub&lt;/b&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="130" y="600" width="160" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="rustfs" value="&lt;b&gt;RustFS&lt;/b&gt; (S3)" style="rounded=1;arcSize=5;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;verticalAlign=top;fontSize=12;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="470" y="560" width="480" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="bucket-datasets" value="bucket&lt;br&gt;&lt;b&gt;datasets&lt;/b&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="540" y="610" width="160" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="bucket-mlflow" value="bucket&lt;br&gt;&lt;b&gt;mlflow&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;TODO&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#f5f5f5;strokeColor=#999999;fontColor=#888888;dashed=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="760" y="610" width="160" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="postgres" value="&lt;b&gt;Postgres&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;TODO&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#f5f5f5;strokeColor=#999999;fontColor=#888888;dashed=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="610" width="140" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Training to tools -->
+        <mxCell id="e-git-train" value="código" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#6c8ebf;strokeWidth=2;fontSize=11;labelBackgroundColor=#ffffff;exitX=0.5;exitY=0;entryX=0.15;entryY=1;" edge="1" parent="1" source="git" target="train">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-dvc-train" value="dataset" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#82b366;strokeWidth=2;fontSize=11;labelBackgroundColor=#ffffff;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" parent="1" source="dvc" target="train">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-train-mlflow" value="registra run" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#999999;dashed=1;fontSize=11;fontColor=#888888;labelBackgroundColor=#ffffff;exitX=0.85;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="train" target="mlflow">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-train-results" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#9673a6;strokeWidth=2;" edge="1" parent="1" source="train" target="results">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- DVC ticket versioned by git -->
+        <mxCell id="e-dvc-git" value=".dvc" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#666666;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="dvc" target="git">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Tools to storage -->
+        <mxCell id="e-git-github" value="push" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#6c8ebf;strokeWidth=2;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="git" target="github">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-dvc-bucket" value="push / pull" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;startArrow=block;startFill=1;endArrow=block;endFill=1;strokeColor=#82b366;strokeWidth=2;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="dvc" target="bucket-datasets">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-mlflow-bucket" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#999999;dashed=1;exitX=0.25;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="mlflow" target="bucket-mlflow">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-mlflow-postgres" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#999999;dashed=1;exitX=0.75;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="mlflow" target="postgres">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
