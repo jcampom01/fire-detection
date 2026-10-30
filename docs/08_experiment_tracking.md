@@ -1,8 +1,8 @@
 # 08 — Tracking de experimentos con MLflow
 
-> Estado: cliente `mlflow-skinny` instalado en el `.venv` y cadena completa comprobada con una prueba de humo
-> (escritura, lectura y borrado definitivo). Pendiente: diseñar qué registra `train.py`, integrarlo, importar los
-> modelos ya entrenados y el registro de modelos con alias.
+> Estado: cliente `mlflow-skinny` en el `.venv`, cadena comprobada con una prueba de humo y **`train.py` integrado**
+> (cada entrenamiento es un run y registra una versión de `fire-detector`), validado con un run de debug.
+> Pendiente: entrenar los modelos `_original`, importar los `_clahe` ya entrenados y los alias con `promote.py`.
 >
 > Infraestructura (contenedores, puertos, arranque): [06_mlops.md](06_mlops.md).
 
@@ -120,12 +120,12 @@ mlflow.log_artifact("training_curves.png")
 
 ### Qué se registra solo y qué no
 
-| | ¿automático? | qué hará falta en `train.py` |
+| | ¿automático? | cómo lo resuelve `train.py` (M.4) |
 |---|---|---|
-| commit de git | ✅ tag `mlflow.source.git.commit` (vía GitPython) | comprobar que el repo no tiene cambios sin commitear |
-| `.dvc` / hash de los datos | ❌ MLflow no conoce DVC | `mlflow.log_input` o artefacto + comprobar `dvc status` |
-| config JSON | ❌ | `mlflow.log_params(config)` |
-| métricas por epoch | solo con `mlflow.keras.autolog()` | autolog o callback |
+| commit de git | ✅ tag `mlflow.source.git.commit` (vía GitPython) | tag `git_dirty` + `git_diff.patch` si hay cambios sin commitear |
+| `.dvc` / hash de los datos | ❌ MLflow no conoce DVC | tag `data.source_md5` + el `.dvc` como artefacto |
+| config JSON | ❌ | `mlflow.log_params` con la config aplanada |
+| métricas por epoch | solo con `mlflow.keras.autolog()` | callback propio (`autolog` no sirve con dos fases) |
 
 Matices del commit:
 
@@ -134,8 +134,8 @@ Matices del commit:
 - Se lee del repo **donde está el script**, no del directorio desde el que se lanza. Un script fuera del repo no
   tiene tag de commit (pasó en la prueba de humo).
 - Como el `.dvc` está en git, el commit fija también la versión de los datos, **si** el repo está limpio y `data/`
-  coincide con el ticket. Ahora solo `original_dataset` está en DVC; los datasets procesados con los que se entrena
-  (`*_224`, `*_380`) necesitan el pipeline D.5 de [07_data_versioning.md](07_data_versioning.md).
+  coincide con el ticket. Solo `original_dataset` está en DVC; los datasets procesados con los que se entrena
+  (`*_224`, `*_380`) se deducen de él y de las configs de preproceso del commit (decisión en M.4).
 
 ### Borrado en dos fases
 
@@ -264,6 +264,99 @@ docker compose exec -T mlflow sh -c '
 Resultado: `Run … has been permanently deleted` y `Experiment with ID 1 has been permanently deleted`. Postgres
 queda solo con `Default` y `runs`/`params`/`metrics`/`tags` a 0; el bucket `mlflow`, vacío.
 
+### M.4 — Integración en `train.py`
+
+Todo lo de MLflow está en [`src/train/tracking.py`](../src/train/tracking.py). `train.py` ejecuta el entrenamiento
+dentro de `with start_run(...)`: el run acaba `FINISHED`, o `FAILED` si algo falla a mitad. `trainer.py` solo
+cambia para aceptar callbacks en las dos fases. `results/<exp>/` se sigue escribiendo igual.
+
+**Diseño:**
+
+| decisión | elegido | por qué |
+|---|---|---|
+| organización | un experimento `fire-detection`; run con el nombre de la config | los 4 experimentos son comparables (misma tarea y test) |
+| params | la config JSON aplanada (`phase1.lr`, `data.image_root`…) + `n_train/val/test` | la config define el experimento |
+| métricas por epoch | callback `EpochLogger`, step global 1…N | `autolog` registra el param `epochs` en cada `fit()` y la fase 2 daría error (params inmutables); además cada fase empezaría en 0. Con callback se ven las curvas en directo |
+| métricas finales | todo `metrics.json` aplanado (`test.recall`, `test.confusion_matrix.fp`, `test_subtype_alarm_rate.smoke_only`…) | ordenar y comparar runs por cualquiera en la UI |
+| tags | `model`, `dataset`, `image_size`, `git_dirty`, `debug`, `data.source`, `data.source_md5` | filtrar en la UI |
+| repo sucio | aviso + `git_dirty=true` + `git_diff.patch` | práctico mientras se experimenta; bloquear tendría sentido en CI |
+| datos | hash DVC de `original_dataset` (tag) + su `.dvc` como artefacto | ver abajo |
+| modelo | `mlflow.keras.log_model` con firma, metadata y versiones de TF/Keras | ver abajo |
+| registro | cada run → nueva versión de `fire-detector`, **sin alias**; los runs de debug no se registran | los alias los mueve `promote.py` tras comparar |
+| servidor caído | `train.py` para antes de entrenar | no perder una hora de entrenamiento sin registrar |
+| dirección | `MLFLOW_TRACKING_URI`, por defecto `http://localhost:5000` | nunca guarda en local sin avisar |
+
+**Datos: solo el origen.** `train.py` lee `data/<dataset>_<size>`, que no está en DVC. Se registra el hash de
+`original_dataset` porque el resto se deduce de él y del run: las configs de preproceso están en el commit registrado,
+y `dataset`, `image_size` y `data.image_root` son params o tags. Para reproducir los datos de un run:
+`git checkout <commit>` → `dvc pull` → scripts de preproceso. El pipeline `dvc.yaml` (D.5) cerraría el hueco de que
+alguien regenere los datos derivados sin commitear, y queda como mejora.
+
+**`meta.json`: lo que la inferencia necesita además de los pesos.** Va en el campo `metadata` del `MLmodel` (viaja
+con el modelo, también al registrarlo) y como fichero en el run y en `results/<exp>/`. Los parámetros de CLAHE se leen
+de `src/preprocess/clahe_config.json`.
+
+```json
+{
+  "threshold": 0.728, "target_recall": 0.95, "image_size": 224, "dataset": "clahe",
+  "preprocessing": {
+    "clahe":  {"clip_limit": 2.0, "tile_grid": 8, "channel": "L of CIELAB", "applied": "at full resolution, before resizing"},
+    "resize": {"size": 224, "interpolation": "cv2.INTER_AREA", "keep_aspect_ratio": false},
+    "input":  "RGB, float32 in 0-255 (the model normalizes internally)"
+  },
+  "output": "probability of alarm (fire and/or smoke); alarm if prob >= threshold"
+}
+```
+
+En los datasets `original`, `clahe` es `null`.
+
+**Prueba con un run de debug** (config temporal: MobileNet + CLAHE 224, `debug_max_images: 200`, 1 epoch por fase;
+1 min 9 s). El experimento `fire-detection` se creó con ID 2 (el 1 lo usó `smoke-test`; Postgres no reutiliza IDs).
+
+- Tags: los propios más los de MLflow: `mlflow.source.git.commit`, `branch` y `repoURL`. Esta vez sí aparece el
+  commit, porque `train.py` está dentro del repo. `git_dirty=True` con su `git_diff.patch`, porque los cambios aún no
+  estaban commiteados.
+- 26 params, 63 métricas (13 por epoch + 50 finales). `val_pr_auc` con step 1 (fase 1) y 2 (fase 2).
+- Modelo no registrado (`debug=True`), como se esperaba.
+
+Estructura real en el bucket:
+
+```
+s3://mlflow/2/
+├── <run_id>/artifacts/
+│   ├── config.json  history.csv  metrics.json  meta.json  git_diff.patch
+│   ├── data/original_dataset.dvc
+│   ├── plots/          confusion_matrix.png  curves.png  metrics.png
+│   └── predictions/    predictions_test.csv  predictions_val.csv
+└── models/m-<id>/artifacts/          el modelo es una entidad aparte del run
+    ├── MLmodel                       flavors keras + python_function, signature, metadata
+    ├── data/model.keras              52 MB
+    ├── requirements.txt              tensorflow==2.21.0, keras==3.15.1
+    └── python_env.yaml  conda.yaml
+```
+
+Signature del `MLmodel`: entrada `image` float32 `[-1, 224, 224, 3]`, salida `alarm` float32 `[-1, 1]`.
+
+**Borrado: el run y el modelo son entidades distintas.** Borrar el run en la UI deja el modelo `active`, ocupando
+espacio en el bucket. Hay que borrar los dos y luego hacer `gc` de ambos:
+
+```bash
+.venv/bin/python -c "from mlflow import MlflowClient; MlflowClient('http://localhost:5000').delete_logged_model('m-<id>')"
+cd deploy/mlops
+docker compose exec -T mlflow sh -c '
+  URI=$(tr "\0" "\n" < /proc/1/cmdline | sed -n "s/^--backend-store-uri=//p")
+  MLFLOW_TRACKING_URI=http://localhost:5000 mlflow gc --backend-store-uri "$URI" \
+    --run-ids <run_id> --logged-model-ids m-<id>
+'
+```
+
+**Pendiente de investigar:** descargar un artefacto desde Python (`mlflow.artifacts.load_text("runs:/…")`) se quedó
+colgado más de 2 minutos. Subir funciona y la UI muestra los artefactos, pero cargar el modelo de `@production` desde
+`promote.py` o la API depende de la descarga.
+
+**Mejora posible:** `model.keras` incluye el estado del optimizador Adam (~75 % del tamaño, ver
+[03_training.md](03_training.md)). No hace falta para inferencia; se podría subir el modelo sin él.
+
 ## Referencia
 
 | API / comando | qué hace |
@@ -281,8 +374,8 @@ queda solo con `Default` y `runs`/`params`/`metrics`/`tags` a 0; el bucket `mlfl
 
 ## Siguientes pasos
 
-1. Diseñar qué registra `train.py`: nombres de experimento y modelo, params, métricas, artefactos, tags y
-   comprobaciones (repo limpio, `dvc status`).
-2. Integrarlo en `train.py` antes de entrenar `mobilenetv3large_original` y `efficientnetb4_original`.
-3. Importar `mobilenetv3large_clahe` y `efficientnetb4_clahe` con la misma estructura.
-4. Registro de modelos, alias y `promote.py`.
+1. Entrenar `mobilenetv3large_original` y `efficientnetb4_original` con el repo limpio (`git_dirty=False`).
+   Con MLflow levantado durante el entrenamiento, para B4 conviene bajar a `--workers=1` por la RAM.
+2. Importar `mobilenetv3large_clahe` y `efficientnetb4_clahe` con la misma estructura.
+3. Investigar la descarga de artefactos colgada.
+4. Alias y `promote.py`.

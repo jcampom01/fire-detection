@@ -25,6 +25,7 @@ Clasificación binaria a nivel de imagen:
 | `trainer.py` | entrenamiento en dos fases con checkpoint de los mejores pesos |
 | `evaluation.py` | predicciones, elección del umbral, métricas, tasa por subtipo, velocidad de inferencia |
 | `plots.py` | curvas de entrenamiento, matriz de confusión, ROC/PR |
+| `tracking.py` | run de MLflow: params, métricas, artefactos y modelo registrado ([08](08_experiment_tracking.md#m4--integración-en-trainpy)) |
 | `compare_results.ipynb` | compara todos los experimentos de `results/` |
 
 ## Modelos
@@ -69,6 +70,10 @@ incendios. `metrics.json` también incluye `test_at_0.5` como referencia.
 
 ## Salidas — `results/<experimento>/`
 
+Cada entrenamiento es además un run de MLflow (experimento `fire-detection`) con todo lo de esta tabla salvo
+`best.weights.h5`, y el modelo se registra como nueva versión de `fire-detector`. Requiere el stack levantado
+(`cd deploy/mlops && docker compose up -d`): ver [08_experiment_tracking.md](08_experiment_tracking.md).
+
 | fichero | contenido |
 |---|---|
 | `config.json` | copia de la config usada |
@@ -76,6 +81,7 @@ incendios. `metrics.json` también incluye `test_at_0.5` como referencia.
 | `best.weights.h5` | solo los pesos (y el optimizador). Necesita `build_model(cfg)` para usarse |
 | `history.csv` | métricas por epoch de las dos fases |
 | `metrics.json` | umbral, métricas de val/test, tasa de alarma por subtipo, velocidad |
+| `meta.json` | lo que necesita la inferencia además del modelo: umbral y preproceso (CLAHE, tamaño, interpolación) |
 | `predictions_{val,test}.csv` | probabilidad por imagen |
 | `curves.png`, `confusion_matrix.png`, `metrics.png` | gráficas |
 

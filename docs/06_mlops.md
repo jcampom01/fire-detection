@@ -148,6 +148,7 @@ El código cliente (`mlflow.log_*`, `mlflow.register_model`) es el mismo en todo
 ## Siguientes pasos
 
 1. ~~Prueba de extremo a extremo desde el host~~ → hecha: [08_experiment_tracking.md](08_experiment_tracking.md) (M.2–M.3).
-2. Integrar `train.py` con MLflow: params, métricas por epoch, artefactos y registro de la versión (`@staging`).
+2. ~~Integrar `train.py` con MLflow~~ → hecho: [08_experiment_tracking.md](08_experiment_tracking.md) (M.4).
+   Cada run registra una versión de `fire-detector` sin alias.
 3. Importar `mobilenetv3large_clahe` y `efficientnetb4_clahe` sin reentrenar.
 4. Alias y `promote.py` (gate de promoción).
