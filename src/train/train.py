@@ -22,9 +22,11 @@ Code layout (src/train/):
     trainer.py      two-phase training with checkpointing of the best weights
     evaluation.py   predictions, threshold, metrics, per-subtype rates, inference speed
     plots.py        training curves, confusion matrix and metrics overview
+    tracking.py     MLflow run: params, metrics, artifacts and the registered model
 
-Every parameter comes from a JSON config (see src/train/configs/). Results are written to
-results/<experiment>/:
+Every parameter comes from a JSON config (see src/train/configs/). Each training is an MLflow run
+(experiment fire-detection; requires the server: cd deploy/mlops && docker compose up -d), and the
+results are also written to results/<experiment>/:
     config.json             copy of the config used
     best.weights.h5         best weights
     model.keras             full model with the best weights
@@ -33,11 +35,13 @@ results/<experiment>/:
     confusion_matrix.png    test confusion matrix at the chosen threshold
     metrics.png             ROC and PR curves, probability histogram, metrics, per-subtype rates
     metrics.json            threshold, val/test metrics, recall per subtype, inference speed
+    meta.json               what inference needs: threshold and preprocessing (CLAHE, size)
     predictions_val.csv     per-image probabilities (val)
     predictions_test.csv    per-image probabilities (test)
 
 Usage:
-    python src/train/train.py --config src/train/configs/efficientnetb0_original.json
+    python src/train/train.py --config src/train/configs/mobilenetv3large_original.json
+    MLFLOW_TRACKING_URI=http://host:5000 python src/train/train.py --config ...   # other server
 """
 
 import argparse
@@ -53,6 +57,7 @@ from data import load_split, make_dataset  # noqa: E402
 from evaluation import evaluate  # noqa: E402
 from model import build_model  # noqa: E402
 from plots import plot_confusion, plot_curves, plot_metrics  # noqa: E402
+from tracking import EpochLogger, log_model, log_results, log_split_sizes, model_metadata, start_run  # noqa: E402
 from trainer import train  # noqa: E402
 
 
@@ -66,6 +71,12 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     shutil.copy(args.config, out / "config.json")
 
+    # Run ends as FINISHED, or FAILED if anything below raises
+    with start_run(cfg, args.config):
+        run(cfg, out)
+
+
+def run(cfg, out):
     gpus = setup_runtime(cfg["seed"], cfg["mixed_precision"])
     print(f"experiment {cfg['experiment']}  |  model {cfg['model']}  |  images {cfg['data']['image_root']}")
     print(f"GPU: {[g.name for g in gpus] or 'none, running on CPU'}")
@@ -74,13 +85,14 @@ def main():
     splits = {s: load_split(s, cfg) for s in ("train", "val", "test")}
     for s, df in splits.items():
         print(f"{s:<5} {len(df):>6,} images  |  alarm={df['alarm'].mean():.1%}")
+    log_split_sizes(splits)
     train_ds = make_dataset(splits["train"], cfg, training=True)
     val_ds = make_dataset(splits["val"], cfg, training=False)
 
     # Training
     model, backbone = build_model(cfg)
     t0 = time.perf_counter()
-    history = train(cfg, model, backbone, train_ds, val_ds)
+    history = train(cfg, model, backbone, train_ds, val_ds, callbacks=[EpochLogger()])
     train_minutes = (time.perf_counter() - t0) / 60
     history.to_csv(out / "history.csv", index=False)
     plot_curves(history, out / "curves.png", cfg["monitor"])
@@ -95,6 +107,13 @@ def main():
     plot_confusion(results["test"]["confusion_matrix"], out / "confusion_matrix.png",
                    f"{cfg['experiment']} — test (threshold {threshold:.3f})")
     plot_metrics(results, pred_val, pred_test, out / "metrics.png")
+    meta = model_metadata(cfg, results)
+    (out / "meta.json").write_text(json.dumps(meta, indent=2))
+
+    # Tracking
+    log_results(results, out)
+    print("\nuploading the model to MLflow...")
+    log_model(model, cfg, meta)
 
     t = results["test"]
     print(f"\nthreshold {threshold:.3f} (val recall >= {cfg['threshold']['target_recall']:.0%})")

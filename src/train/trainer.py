@@ -29,12 +29,15 @@ def run_phase(name, model, train_ds, val_ds, phase_cfg, cfg, best_value, extra_c
     return df, best if best_value is None else max(best, best_value)
 
 
-def train(cfg, model, backbone, train_ds, val_ds):
-    """Run both phases and return the per-epoch history (columns: phase, epoch, metrics...)."""
+def train(cfg, model, backbone, train_ds, val_ds, callbacks=()):
+    """Run both phases and return the per-epoch history (columns: phase, epoch, metrics...).
+
+    `callbacks` are added to both phases (e.g. the MLflow epoch logger).
+    """
     best_weights = cfg["output_dir"] / "best.weights.h5"
 
     compile_model(model, cfg["phase1"]["lr"])
-    h1, best = run_phase("phase1", model, train_ds, val_ds, cfg["phase1"], cfg, None)
+    h1, best = run_phase("phase1", model, train_ds, val_ds, cfg["phase1"], cfg, None, callbacks)
 
     p2 = cfg["phase2"]
     model.load_weights(best_weights)
@@ -44,7 +47,7 @@ def train(cfg, model, backbone, train_ds, val_ds):
     reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor=cfg["monitor"], mode="max",
                                                   factor=p2["reduce_lr_factor"],
                                                   patience=p2["reduce_lr_patience"], min_lr=1e-7)
-    h2, _ = run_phase("phase2", model, train_ds, val_ds, p2, cfg, best, [reduce_lr])
+    h2, _ = run_phase("phase2", model, train_ds, val_ds, p2, cfg, best, [reduce_lr, *callbacks])
 
     model.load_weights(best_weights)
     history = pd.concat([h1, h2], ignore_index=True)
