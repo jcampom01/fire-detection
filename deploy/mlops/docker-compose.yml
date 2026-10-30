@@ -56,6 +56,8 @@ services:
       AWS_DEFAULT_REGION: us-east-1
       MLFLOW_S3_ENDPOINT_URL: http://rustfs:9000
       MLFLOW_SERVER_ALLOWED_HOSTS: "localhost,localhost:*,127.0.0.1,127.0.0.1:*,mlflow,mlflow:*"
+      # GenAI background jobs (job runner + 7 huey consumers, ~1.6 GB of RAM); not used for tracking/registry
+      MLFLOW_SERVER_ENABLE_JOB_EXECUTION: "false"
     command:
       - mlflow
       - server
@@ -64,7 +66,7 @@ services:
       - --serve-artifacts
       - --host=0.0.0.0
       - --port=5000
-      - --workers=2
+      - --workers=1  # single user; each worker costs ~0.5-1 GB of RAM, needed for training
     ports:
       - "127.0.0.1:5000:5000"  # UI + API, only from this machine
     healthcheck:

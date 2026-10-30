@@ -375,7 +375,7 @@ colgado más de 2 minutos. Subir funciona y la UI muestra los artefactos, pero c
 ## Siguientes pasos
 
 1. Entrenar `mobilenetv3large_original` y `efficientnetb4_original` con el repo limpio (`git_dirty=False`).
-   Con MLflow levantado durante el entrenamiento, para B4 conviene bajar a `--workers=1` por la RAM.
+   MLflow tiene que estar levantado; su consumo de RAM ya está reducido (ver incidencias en [06_mlops.md](06_mlops.md)).
 2. Importar `mobilenetv3large_clahe` y `efficientnetb4_clahe` con la misma estructura.
 3. Investigar la descarga de artefactos colgada.
 4. Alias y `promote.py`.

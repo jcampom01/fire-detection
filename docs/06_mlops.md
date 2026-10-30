@@ -110,6 +110,8 @@ De las 65 tablas, las relevantes son `experiments`, `runs`, `params`, `metrics`,
   Adminer entra por la red interna, así que Postgres sigue sin puerto publicado.
 - **El bucket se crea a mano** con un script, no como servicio del compose: es un paso único de preparación.
   El script usa `aws-cli` en un contenedor dentro de la red de compose, así que no hay que instalar nada en el host.
+- **`--workers=1` y sin jobs** (`MLFLOW_SERVER_ENABLE_JOB_EXECUTION=false`): un solo usuario y sin funciones de IA
+  generativa; deja la RAM para entrenar (ver Incidencias).
 - **`MLFLOW_SERVER_ALLOWED_HOSTS`** incluye `mlflow:*` para que otros contenedores (el futuro puller) puedan llamar a
   `http://mlflow:5000`. Por defecto MLflow 3 solo acepta `localhost` e IPs privadas (protección frente a DNS rebinding).
 
@@ -140,10 +142,21 @@ El código cliente (`mlflow.log_*`, `mlflow.register_model`) es el mismo en todo
   `psycopg` (v3), no `psycopg2`.
 - **Solución:** instalar `psycopg[binary]` en el Dockerfile (alternativa: URL `postgresql+psycopg2://`).
 
-### MLflow ocupa ~1,9 GB de RAM
+### MLflow ocupa ~1,7 GB de RAM y el entrenamiento se atasca
 
-- Con `--workers=2`, frente a ~130 MB de RustFS y ~70 MB de Postgres. Con ~7,7 GiB en WSL, conviene parar el stack
-  (`docker compose stop`) mientras se entrena EfficientNetB4, o bajar a `--workers=1`.
+- **Síntoma:** el primer entrenamiento con MLflow (`mobilenetv3large_original`) se quedó parado al empezar la fase 2,
+  con 75 MB de RAM libres y el swap de 2 GB lleno (*thrashing*). La fase 2 necesita más memoria que la 1.
+- **Consumo:** `train.py` 2,2 GB, Pylance (VS Code) 1,8 GB, servidor de VS Code 0,6 GB, MLflow 1,65 GB, RustFS ~0,5–1 GB,
+  sobre ~7,7 GB de WSL.
+- **Causa en MLflow:** no eran los workers (con `--workers=1` seguía en 1,65 GB), sino el sistema de **jobs** de MLflow 3:
+  un `job_runner` y 7 consumidores `huey` de ~230 MB cada uno, para tareas de IA generativa que no se usan.
+- **Solución:** `MLFLOW_SERVER_ENABLE_JOB_EXECUTION=false` y `--workers=1` en el compose → **390 MB**. Tracking,
+  registro y artefactos siguen funcionando. Ya no hace falta parar el stack para entrenar, que además ahora es
+  obligatorio que esté levantado.
+- Además, reiniciar Pylance (*Python: Restart Language Server*) o cerrar VS Code mientras se entrena. Para más margen,
+  subir `memory=` en `%UserProfile%\.wslconfig` (por defecto WSL usa la mitad de la RAM del PC).
+- El run atascado se quedó en `RUNNING` (un proceso matado no avisa al servidor): se marcó como `KILLED` con
+  `MlflowClient().set_terminated(run_id, status="KILLED")`, se borró y se hizo `gc`.
 
 ## Siguientes pasos
 
