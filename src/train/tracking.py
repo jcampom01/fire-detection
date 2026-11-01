@@ -23,6 +23,10 @@ from pathlib import Path
 
 os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")
 os.environ.setdefault("MLFLOW_DISABLE_TELEMETRY", "true")  # anonymous usage data sent to MLflow
+# The server hands out presigned URLs on its own S3 endpoint (http://rustfs:9000), which only resolves inside
+# the Docker network: from the host, downloads (and uploads >= 500 MB) would hang. Go through the server instead.
+os.environ.setdefault("MLFLOW_ENABLE_PROXY_MULTIPART_DOWNLOAD", "false")
+os.environ.setdefault("MLFLOW_ENABLE_PROXY_MULTIPART_UPLOAD", "false")
 
 import git  # noqa: E402
 import mlflow  # noqa: E402

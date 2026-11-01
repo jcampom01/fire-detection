@@ -165,5 +165,6 @@ Con estas reglas, ni la v1 ni la v2 pueden sustituirla: tienen más falsas alarm
 
 ## Siguientes pasos
 
-- API de inferencia que cargue `@production` (antes: investigar la descarga de artefactos colgada).
+- API de inferencia que cargue `@production`. La descarga desde el host ya funciona: el modelo de la v3 (174 MB) se
+  descarga en 0,6 s (ver incidencias de [06_mlops.md](06_mlops.md)).
 - Medir la velocidad de la v3 en la API y decidir si entra en el gate.

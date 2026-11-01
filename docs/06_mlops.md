@@ -142,6 +142,23 @@ El código cliente (`mlflow.log_*`, `mlflow.register_model`) es el mismo en todo
   `psycopg` (v3), no `psycopg2`.
 - **Solución:** instalar `psycopg[binary]` en el Dockerfile (alternativa: URL `postgresql+psycopg2://`).
 
+### Las descargas desde el host se quedan colgadas
+
+- **Síntoma:** `mlflow.artifacts.load_text(...)` o `download_artifacts("models:/fire-detector@production")` se quedan en
+  `Downloading artifacts: 0/1` indefinidamente, también con ficheros de 500 bytes. Subir funciona.
+- **Diagnóstico:** `curl` al mismo artefacto (`/api/2.0/mlflow-artifacts/artifacts/...`) responde en 0,04 s, así que
+  el servidor sirve bien. El log del servidor muestra que el cliente no pide el fichero sino
+  `/api/2.0/mlflow-artifacts/presigned/...`: una **URL presigned** para descargar directamente de S3. La URL es
+  `http://rustfs:9000/...`, el nombre del contenedor, que solo resuelve dentro de la red de Docker. El cliente reintenta
+  con esperas crecientes y parece colgado.
+- **Causa:** MLflow 3 anuncia en `/api/3.0/mlflow/server-info` `multipart_downloads_enabled: true` siempre que el
+  almacén es S3, y el cliente entonces descarga directamente del almacén. Las subidas ≥ 500 MB hacen lo mismo.
+  En la nube tiene sentido (S3 es accesible y descarga el servidor); aquí no.
+- **Solución (cliente):** `MLFLOW_ENABLE_PROXY_MULTIPART_DOWNLOAD=false` y `MLFLOW_ENABLE_PROXY_MULTIPART_UPLOAD=false`
+  (en `tracking.py`): todo pasa por el servidor. Si la variable está definida, el cliente no consulta al servidor.
+  Resultado: `meta.json` 0,06 s, modelo completo de `@production` (174 MB) 0,62 s.
+- Un contenedor en la red de compose (la futura API) sí resuelve `rustfs`, así que allí funcionaría con o sin la variable.
+
 ### MLflow ocupa ~1,7 GB de RAM y el entrenamiento se atasca
 
 - **Síntoma:** el primer entrenamiento con MLflow (`mobilenetv3large_original`) se quedó parado al empezar la fase 2,

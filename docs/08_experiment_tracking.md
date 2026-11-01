@@ -351,9 +351,9 @@ docker compose exec -T mlflow sh -c '
 '
 ```
 
-**Pendiente de investigar:** descargar un artefacto desde Python (`mlflow.artifacts.load_text("runs:/…")`) se quedó
-colgado más de 2 minutos. Subir funciona y la UI muestra los artefactos, pero cargar el modelo de `@production` desde
-`promote.py` o la API depende de la descarga.
+**Descarga colgada (resuelto):** descargar un artefacto desde Python (`mlflow.artifacts.load_text("runs:/…")`) se
+quedaba colgado. Causa: URLs presigned hacia `http://rustfs:9000`, que no resuelve desde el host. Solución en
+`tracking.py`; diagnóstico completo en las incidencias de [06_mlops.md](06_mlops.md).
 
 **Mejora posible:** `model.keras` incluye el estado del optimizador Adam (~75 % del tamaño, ver
 [03_training.md](03_training.md)). No hace falta para inferencia; se podría subir el modelo sin él.
@@ -407,7 +407,7 @@ fase 2 (lo añade `ReduceLROnPlateau`). Propuesta: registrar `phase` (1/2) y `le
 
 ## Siguientes pasos
 
-1. Investigar la descarga de artefactos colgada antes de que la API cargue `@production`.
+1. ~~Investigar la descarga de artefactos colgada~~ → resuelto (incidencias de [06_mlops.md](06_mlops.md)).
 2. Registrar `phase` y `learning_rate` por epoch (M.5).
 3. Entrenar `efficientnetb4_original` (pospuesto).
 4. Alias y promoción: [09_model_registry.md](09_model_registry.md).
