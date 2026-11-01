@@ -15,6 +15,13 @@ Stack `deploy/mlops` (proyecto Compose `fire-mlops`, red `fire-mlops_default`).
 - **Publicado en `127.0.0.1`:** accesible solo desde esta máquina, no desde la red local.
 - **Solo red interna:** solo lo alcanzan otros contenedores de la misma red, por el nombre del servicio.
 
+Stack `deploy/serving` (proyecto Compose `fire-serving`, red `fire-serving_default`).
+
+| servicio | puerto | protocolo | publicado en el host | URL / uso |
+|---|---:|---|---|---|
+| `tf-serving` | 8501 | HTTP (REST) | `127.0.0.1:8501` (pruebas; pasará a solo red interna con la API) | `GET /v1/models/fire_detector` · `POST /v1/models/fire_detector/versions/<v>:predict` |
+| `tf-serving` | 8500 | gRPC | no | clientes gRPC dentro de la red |
+
 ## Conexiones
 
 | origen | destino | cómo | para qué |
@@ -28,6 +35,7 @@ Stack `deploy/mlops` (proyecto Compose `fire-mlops`, red `fire-mlops_default`).
 | `dvc` (host) | `rustfs` | `http://localhost:9000`, bucket `datasets` | subir y bajar versiones del dataset (cliente S3 directo, sin proxy) |
 | navegador (host) | `adminer` | `http://localhost:8081` | inspeccionar las tablas de MLflow |
 | `adminer` | `postgres` | `postgres:5432` dentro de la red | consultas (Postgres sigue sin puerto publicado) |
+| scripts de prueba (host) | `tf-serving` | `http://127.0.0.1:8501` | predecir y comprobar el modelo servido |
 
 ```
                       HOST (WSL2)
@@ -52,8 +60,7 @@ Según el plan de [05_deployment.md](05_deployment.md):
 
 | servicio | puerto | publicado | uso |
 |---|---:|---|---|
-| `inference-api` | 8080 | sí | `POST /predict`, `/health`, `/metrics` |
-| `model-server` (TF Serving) | 8500 / 8501 | no | gRPC / REST hacia el modelo |
+| `api` (stack `fire-serving`) | 8080 | sí | `POST /predict`, `/health`, `/metrics` |
 | `prometheus` | 9090 | sí | métricas |
 | `grafana` | 3000 | sí | dashboards |
 | `locust` | 8089 | sí | pruebas de carga |

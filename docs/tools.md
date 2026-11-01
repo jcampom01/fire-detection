@@ -22,13 +22,13 @@
 | **pandas / NumPy / scikit-learn / SciPy** | Datos tabulares, cálculo numérico, métricas y tests estadísticos. |
 | **Matplotlib** | Gráficas de entrenamiento y evaluación. |
 | **Jupyter (ipykernel)** | Notebooks de EDA y comparación de resultados. |
+| **TensorFlow Serving** | Servidor de modelos (C++): carga el SavedModel y responde predicciones por REST/gRPC; cambia de versión sin cortes. |
 | **draw.io** | Diagramas de arquitectura ([mlops_architecture.drawio](mlops_architecture.drawio)). |
 
 ## Previstas
 
 | herramienta | para qué servirá |
 |---|---|
-| **TensorFlow Serving** | Servidor de modelos: carga el SavedModel y responde peticiones de inferencia por gRPC/REST. |
 | **FastAPI** | API de inferencia: preproceso, llamada al modelo, umbral y endpoints `/predict`, `/health`, `/metrics`. |
 | **Prometheus** | Recoge métricas de los servicios (latencia, peticiones, alarmas). |
 | **Grafana** | Dashboards y alertas sobre las métricas de Prometheus. |

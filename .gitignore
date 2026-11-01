@@ -234,3 +234,6 @@ __marimo__/
 
 # Result folder
 results/
+
+# Models exported for serving (generated from MLflow, the source of truth)
+deploy/serving/models/

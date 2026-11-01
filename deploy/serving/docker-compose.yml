@@ -1,0 +1,19 @@
+name: fire-serving
+
+services:
+  # --- Model server: serves the SavedModel versions in ./models/fire_detector/<version>/ ---
+  tf-serving:
+    image: tensorflow/serving:2.21.0  # same version as the TensorFlow used to export
+    environment:
+      MODEL_NAME: fire_detector  # serves /models/fire_detector (entrypoint: --model_base_path=/models/$MODEL_NAME)
+    volumes:
+      - ./models:/models:ro  # written by the deploy step, never by the server
+    ports:
+      - "127.0.0.1:8501:8501"  # REST, for manual tests; internal only once the API is in front
+    healthcheck:
+      # No curl/wget in the image: plain HTTP request through bash's /dev/tcp
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8501 && printf 'GET /v1/models/fire_detector HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q AVAILABLE <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s

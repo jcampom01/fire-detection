@@ -14,6 +14,7 @@ como base para practicar un despliegue MLOps completo.
 | [07_data_versioning.md](07_data_versioning.md) | Versionado de datos con DVC: conceptos y pasos realizados |
 | [08_experiment_tracking.md](08_experiment_tracking.md) | Tracking de experimentos con MLflow: conceptos y prueba de humo |
 | [09_model_registry.md](09_model_registry.md) | Registro de modelos: alias, gate y promoción con `promote.py` |
+| [10_serving.md](10_serving.md) | Servir el modelo: TF Serving, SavedModel, despliegue y pruebas |
 | [ports.md](ports.md) | Puertos en uso y conexiones entre servicios |
 | [tools.md](tools.md) | Herramientas del proyecto y para qué sirve cada una |
 
@@ -47,5 +48,6 @@ src/
 └── registry/                         promoción de modelos (alias) y sus reglas
 results/<experimento>/                salidas de cada entrenamiento
 deploy/mlops/                         plataforma MLOps (docker-compose: MLflow, Postgres, RustFS)
+deploy/serving/                       servicio de inferencia (docker-compose: TF Serving; después la API)
 docs/                                 esta documentación
 ```
