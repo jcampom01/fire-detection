@@ -58,6 +58,7 @@ services:
       MLFLOW_SERVER_ALLOWED_HOSTS: "localhost,localhost:*,127.0.0.1,127.0.0.1:*,mlflow,mlflow:*"
       # GenAI background jobs (job runner + 7 huey consumers, ~1.6 GB of RAM); not used for tracking/registry
       MLFLOW_SERVER_ENABLE_JOB_EXECUTION: "false"
+      MLFLOW_DISABLE_TELEMETRY: "true"  # anonymous usage data sent to MLflow
     command:
       - mlflow
       - server

@@ -22,6 +22,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")
+os.environ.setdefault("MLFLOW_DISABLE_TELEMETRY", "true")  # anonymous usage data sent to MLflow
 
 import git  # noqa: E402
 import mlflow  # noqa: E402
@@ -96,13 +97,23 @@ def log_data_source():
     mlflow.log_artifact(str(DVC_SOURCE), artifact_path="data")
 
 
-@contextmanager
-def start_run(cfg, config_path):
-    """Open the run and log what is known before training: tags, params and the git state."""
+def connect():
+    """Point the client at the server (checked first) and activate the experiment. Returns (uri, experiment)."""
     uri = os.environ.get("MLFLOW_TRACKING_URI", DEFAULT_TRACKING_URI)
     check_server(uri)
     mlflow.set_tracking_uri(uri)
-    mlflow.set_experiment(EXPERIMENT)
+    return uri, mlflow.set_experiment(EXPERIMENT)
+
+
+def run_tags(cfg):
+    return {"model": cfg["model"], "dataset": cfg["dataset"], "image_size": cfg["image_size"],
+            "debug": bool(cfg.get("debug_max_images"))}
+
+
+@contextmanager
+def start_run(cfg, config_path):
+    """Open the run and log what is known before training: tags, params and the git state."""
+    uri, _ = connect()
 
     with mlflow.start_run(run_name=cfg["experiment"]) as run:
         dirty, diff = git_state()
@@ -110,13 +121,7 @@ def start_run(cfg, config_path):
             print("WARNING: uncommitted changes, the git commit does not match the code that runs "
                   "(diff saved as git_diff.patch)")
             mlflow.log_text(diff, "git_diff.patch")
-        mlflow.set_tags({
-            "model": cfg["model"],
-            "dataset": cfg["dataset"],
-            "image_size": cfg["image_size"],
-            "git_dirty": dirty,
-            "debug": bool(cfg.get("debug_max_images")),
-        })
+        mlflow.set_tags({**run_tags(cfg), "git_dirty": dirty})
         log_data_source()
         mlflow.log_params(flatten(json.loads(Path(config_path).read_text())))
         print(f"MLflow run: {uri}/#/experiments/{run.info.experiment_id}/runs/{run.info.run_id}")
