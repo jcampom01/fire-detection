@@ -1,8 +1,8 @@
 # 06 — Plataforma MLOps (tracking y registro de modelos)
 
-> Estado: **infraestructura levantada** (Postgres + RustFS + MLflow) y comprobada de extremo a extremo desde el host.
-> Pendiente: integración con `train.py`, importar los modelos ya entrenados y gate de promoción.
-> Conceptos de MLflow y prueba de humo: [08_experiment_tracking.md](08_experiment_tracking.md).
+> Estado: **en uso**. Postgres + RustFS + MLflow levantados; `train.py` registra cada entrenamiento y
+> `fire-detector` tiene v3 en `@production`.
+> Tracking: [08_experiment_tracking.md](08_experiment_tracking.md). Registro y promoción: [09_model_registry.md](09_model_registry.md).
 
 ## Qué resuelve
 
@@ -163,5 +163,5 @@ El código cliente (`mlflow.log_*`, `mlflow.register_model`) es el mismo en todo
 1. ~~Prueba de extremo a extremo desde el host~~ → hecha: [08_experiment_tracking.md](08_experiment_tracking.md) (M.2–M.3).
 2. ~~Integrar `train.py` con MLflow~~ → hecho: [08_experiment_tracking.md](08_experiment_tracking.md) (M.4).
    Cada run registra una versión de `fire-detector` sin alias.
-3. Importar `mobilenetv3large_clahe` y `efficientnetb4_clahe` sin reentrenar.
-4. Alias y `promote.py` (gate de promoción).
+3. ~~Importar `mobilenetv3large_clahe` y `efficientnetb4_clahe`~~ → hecho (08, M.5).
+4. ~~Alias y `promote.py`~~ → hecho: [09_model_registry.md](09_model_registry.md). v3 en `@production`.

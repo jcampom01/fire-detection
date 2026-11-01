@@ -26,6 +26,7 @@ Clasificación binaria a nivel de imagen:
 | `evaluation.py` | predicciones, elección del umbral, métricas, tasa por subtipo, velocidad de inferencia |
 | `plots.py` | curvas de entrenamiento, matriz de confusión, ROC/PR |
 | `tracking.py` | run de MLflow: params, métricas, artefactos y modelo registrado ([08](08_experiment_tracking.md#m4--integración-en-trainpy)) |
+| `import_results.py` | importa a MLflow entrenamientos anteriores a la integración ([08](08_experiment_tracking.md#m5--primer-entrenamiento-real-e-importación-de-los-anteriores)) |
 | `compare_results.ipynb` | compara todos los experimentos de `results/` |
 
 ## Modelos

@@ -1,8 +1,9 @@
 # 08 — Tracking de experimentos con MLflow
 
 > Estado: cliente `mlflow-skinny` en el `.venv`, cadena comprobada con una prueba de humo y **`train.py` integrado**
-> (cada entrenamiento es un run y registra una versión de `fire-detector`), validado con un run de debug.
-> Pendiente: entrenar los modelos `_original`, importar los `_clahe` ya entrenados y los alias con `promote.py`.
+> (cada entrenamiento es un run y registra una versión de `fire-detector`). En el registro: v1 `mobilenetv3large_original`
+> (entrenado con MLflow), v2 `mobilenetv3large_clahe` y v3 `efficientnetb4_clahe` (importados).
+> Alias y promoción: [09_model_registry.md](09_model_registry.md).
 >
 > Infraestructura (contenedores, puertos, arranque): [06_mlops.md](06_mlops.md).
 
@@ -357,6 +358,38 @@ colgado más de 2 minutos. Subir funciona y la UI muestra los artefactos, pero c
 **Mejora posible:** `model.keras` incluye el estado del optimizador Adam (~75 % del tamaño, ver
 [03_training.md](03_training.md)). No hace falta para inferencia; se podría subir el modelo sin él.
 
+### M.5 — Primer entrenamiento real e importación de los anteriores
+
+**`mobilenetv3large_original`**, entrenado con `train.py` y el repo limpio: run `FINISHED`, `git_dirty=False`, commit
+`3d2770c`, registrado como **v1**. El primer intento se atascó por falta de RAM al empezar la fase 2 (ver incidencias
+en [06_mlops.md](06_mlops.md)): el run quedó en `RUNNING`, se marcó `KILLED` y se borró.
+
+**`mobilenetv3large_clahe` y `efficientnetb4_clahe`**, entrenados antes de la integración, se importaron con
+[`src/train/import_results.py`](../src/train/import_results.py) como **v2** y **v3**:
+
+```bash
+.venv/bin/python src/train/import_results.py results/mobilenetv3large_clahe results/efficientnetb4_clahe
+```
+
+- Misma estructura que un run de `train.py` (reutiliza las funciones de `tracking.py`): params, curvas por epoch desde
+  `history.csv`, métricas finales, artefactos, `meta.json` y modelo registrado.
+- **El código con el que se entrenaron no se conoce:** tag `mlflow.source.git.commit=unknown`, sin `git_dirty`, y tags
+  `imported=true` e `imported_from=results/<exp>`.
+- **Fechas reales:** el run se crea con `MlflowClient.create_run(start_time=…)` y se cierra con
+  `set_terminated(end_time=…)`. Fin = fecha de `model.keras`; inicio = fin − `train_minutes`. `mlflow.start_run()` no
+  permite indicar fechas.
+- **Idempotente:** si ya existe un run con el mismo `imported_from`, lo salta.
+- `create_run` exige tags de tipo texto (`mlflow.set_tags` los convierte, `create_run` no): primer intento fallido con
+  `TypeError: bad argument type`, sin dejar nada a medias.
+
+**Telemetría desactivada.** El traceback de ese error mostró `mlflow/telemetry/track.py`: MLflow 3 envía datos de uso
+anónimos. Se desactiva con `MLFLOW_DISABLE_TELEMETRY=true`, en el cliente (`tracking.py`, `promote.py`) y en el
+servidor (compose), igual que `core.analytics false` en DVC.
+
+**Pendiente: la fase en las gráficas.** Las métricas por epoch no indican la fase, y `learning_rate` solo existe en la
+fase 2 (lo añade `ReduceLROnPlateau`). Propuesta: registrar `phase` (1/2) y `learning_rate` en todos los epochs, en
+`EpochLogger` e `import_results.py`, y añadirlos a los 3 runs existentes (se pueden añadir métricas a un run terminado).
+
 ## Referencia
 
 | API / comando | qué hace |
@@ -374,8 +407,7 @@ colgado más de 2 minutos. Subir funciona y la UI muestra los artefactos, pero c
 
 ## Siguientes pasos
 
-1. Entrenar `mobilenetv3large_original` y `efficientnetb4_original` con el repo limpio (`git_dirty=False`).
-   MLflow tiene que estar levantado; su consumo de RAM ya está reducido (ver incidencias en [06_mlops.md](06_mlops.md)).
-2. Importar `mobilenetv3large_clahe` y `efficientnetb4_clahe` con la misma estructura.
-3. Investigar la descarga de artefactos colgada.
-4. Alias y `promote.py`.
+1. Investigar la descarga de artefactos colgada antes de que la API cargue `@production`.
+2. Registrar `phase` y `learning_rate` por epoch (M.5).
+3. Entrenar `efficientnetb4_original` (pospuesto).
+4. Alias y promoción: [09_model_registry.md](09_model_registry.md).
