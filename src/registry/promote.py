@@ -14,7 +14,12 @@ Commands:
     rollback    move @production back to @previous and serve it (already exported: only the config changes)
 
 Deploying to TF Serving runs src/registry/export.py in a separate process, so this script never loads TensorFlow.
-The export (slow, may fail) happens before any alias moves; activating the version is the last step.
+The export (slow, may fail) happens before any alias moves; activating the version is the last step. Then it waits
+until the API serves the new version and runs src/registry/verify_serving.py on a sample of the test split
+(--verify N, 0 to skip); if that fails it exits 1 and suggests a rollback (it does not roll back on its own).
+
+--rules selects another rules file, e.g. promotion_drill.json (no improvement needed) to rehearse deploy/rollback
+with an older version; the rules file used is recorded in the gate.rules tag.
 
 Aliases (MLflow keeps no alias history, so every move also leaves tags on the versions):
     production / staging / previous, or production_<env> / staging_<env> / previous_<env> with --env.
@@ -24,6 +29,7 @@ Usage:
     python src/registry/promote.py status
     python src/registry/promote.py stage --version 3 --dry-run
     python src/registry/promote.py deploy --env bcn
+    python src/registry/promote.py stage --version 1 --rules src/registry/promotion_drill.json
 """
 
 import argparse
@@ -31,6 +37,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -43,6 +50,7 @@ from mlflow.exceptions import MlflowException  # noqa: E402
 
 RULES_PATH = Path(__file__).resolve().parent / "promotion.json"
 EXPORT_SCRIPT = Path(__file__).resolve().parent / "export.py"
+VERIFY_SCRIPT = Path(__file__).resolve().parent / "verify_serving.py"
 DEFAULT_TRACKING_URI = "http://localhost:5000"
 DEFAULT_SERVING_API_URL = "http://127.0.0.1:8080"
 
@@ -140,12 +148,13 @@ def gate(reg, rules, candidate, production):
     return all(ok for ok, _ in checks), checks
 
 
-def record_gate(reg, version, production, passed, checks):
+def record_gate(reg, version, production, passed, checks, rules_path):
     failed = [text for ok, text in checks if not ok]
     reg.tag(version, **{
         "gate.result": "passed" if passed else "failed",
         "gate.reason": "; ".join(failed) or "all checks passed",
         "gate.compared_to": f"v{production.version}" if production else "none",
+        "gate.rules": rules_path.name,
         "gate.checked_at": now(),
     })
 
@@ -189,7 +198,7 @@ def cmd_stage(reg, rules, args):
     print(f"gate for v{candidate.version} ({reg.run(candidate).info.run_name}):")
     passed, checks = gate(reg, rules, candidate, production)
     print(f"\n{'PASSED' if passed else 'FAILED'}:")
-    record_gate(reg, candidate, production, passed, checks)
+    record_gate(reg, candidate, production, passed, checks, args.rules)
     if not passed:
         raise SystemExit(1)
     reg.set_alias(reg.staging, candidate)
@@ -206,7 +215,7 @@ def cmd_deploy(reg, rules, args):
     passed, checks = gate(reg, rules, staging, production)
     if not passed:
         print("\nFAILED:")
-        record_gate(reg, staging, production, passed, checks)
+        record_gate(reg, staging, production, passed, checks, args.rules)
         raise SystemExit(1)
 
     print("\nPASSED:")
@@ -219,6 +228,7 @@ def cmd_deploy(reg, rules, args):
     reg.tag(staging, promoted_at=stamp, replaced=f"v{production.version}" if production else "none")
     reg.delete_alias(reg.staging)
     serve(reg, staging)
+    verify(reg, staging, args.verify)
 
 
 def cmd_rollback(reg, rules, args):
@@ -236,6 +246,7 @@ def cmd_rollback(reg, rules, args):
     reg.tag(previous, restored_at=stamp)
     reg.delete_alias(reg.previous)
     serve(reg, previous)
+    verify(reg, previous, args.verify)
 
 
 def serve(reg, version, activate=True):
@@ -250,6 +261,28 @@ def serve(reg, version, activate=True):
     print(f"   {'[dry-run] would run' if reg.dry_run else 'running'}: {' '.join(cmd[1:])}")
     if not reg.dry_run:
         subprocess.run(cmd, check=True)
+
+
+def verify(reg, version, limit, timeout=180):
+    """Wait until the API serves this version, then compare a sample of the test split with the training run."""
+    if reg.suffix or reg.dry_run or not limit:
+        return
+    url = os.environ.get("SERVING_API_URL", DEFAULT_SERVING_API_URL)
+    expected, deadline = int(version.version), time.time() + timeout
+    print(f"   waiting for the API to serve v{expected}...")
+    while True:
+        try:
+            if json.load(urllib.request.urlopen(f"{url}/model", timeout=5))["version"] == expected:
+                break
+        except OSError:
+            pass  # 503 while TF Serving loads it
+        if time.time() > deadline:
+            raise SystemExit(f"the API does not serve v{expected} after {timeout} s: check the TF Serving logs")
+        time.sleep(2)
+    cmd = [sys.executable, str(VERIFY_SCRIPT), "--limit", str(limit)]
+    print(f"   running: {' '.join(cmd[1:])}")
+    if subprocess.run(cmd).returncode != 0:
+        raise SystemExit(f"v{expected} is served but FAILED the end-to-end check: consider `rollback`")
 
 
 def check_server(uri):
@@ -268,9 +301,12 @@ def main():
     parser.add_argument("--version", type=int, help="version to stage (default: latest)")
     parser.add_argument("--env", default="", help="environment suffix for the aliases, e.g. bcn -> @production_bcn")
     parser.add_argument("--dry-run", action="store_true", help="show what would change without changing anything")
+    parser.add_argument("--rules", type=Path, default=RULES_PATH, help="gate rules (default: promotion.json)")
+    parser.add_argument("--verify", type=int, default=200,
+                        help="test images checked through the API after deploy/rollback (0: skip)")
     args = parser.parse_args()
 
-    rules = json.loads(RULES_PATH.read_text())
+    rules = json.loads(args.rules.read_text())
     uri = os.environ.get("MLFLOW_TRACKING_URI", DEFAULT_TRACKING_URI)
     check_server(uri)
     reg = Registry(MlflowClient(uri), rules["registered_model"], args.env, args.dry_run)

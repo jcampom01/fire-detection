@@ -14,7 +14,7 @@ como base para practicar un despliegue MLOps completo.
 | [07_data_versioning.md](07_data_versioning.md) | Versionado de datos con DVC: conceptos y pasos realizados |
 | [08_experiment_tracking.md](08_experiment_tracking.md) | Tracking de experimentos con MLflow: conceptos y prueba de humo |
 | [09_model_registry.md](09_model_registry.md) | Registro de modelos: alias, gate y promoción con `promote.py` |
-| [10_serving.md](10_serving.md) | Servir el modelo: TF Serving, API, preparación fiel al entrenamiento y despliegue automático |
+| [10_serving.md](10_serving.md) | Servir el modelo: TF Serving, API, preparación fiel al entrenamiento, despliegue automático y verificación |
 | [ports.md](ports.md) | Puertos en uso y conexiones entre servicios |
 | [tools.md](tools.md) | Herramientas del proyecto y para qué sirve cada una |
 
@@ -45,7 +45,7 @@ src/
 ├── preprocess/                       etiquetas, CLAHE, resize (+ configs JSON)
 ├── train/                            entrenamiento, evaluación, tracking en MLflow e importación de runs
 │   └── configs/                      un JSON por experimento (modelo × dataset)
-├── registry/                         promoción de modelos (alias), sus reglas y exportación a TF Serving
+├── registry/                         promoción de modelos (alias), sus reglas, exportación a TF Serving y verificación
 └── api/                              API de inferencia (FastAPI)
 results/<experimento>/                salidas de cada entrenamiento
 deploy/mlops/                         plataforma MLOps (docker-compose: MLflow, Postgres, RustFS)

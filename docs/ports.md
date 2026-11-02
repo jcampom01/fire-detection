@@ -39,6 +39,7 @@ Stack `deploy/serving` (proyecto Compose `fire-serving`, red `fire-serving_defau
 | aplicación / `curl` (host) | `api` | `http://127.0.0.1:8080` | predecir (`POST /predict`, multipart) |
 | `api` | `tf-serving` | `http://tf-serving:8501` dentro de la red `fire-serving_default` | versión servida y predicción (JPEG en `{"b64": ...}`) |
 | `promote.py status` (host) | `api` | `http://127.0.0.1:8080/model` (`SERVING_API_URL`) | versión servida, para detectar drift |
+| `verify_serving.py` (host; también desde `promote.py deploy/rollback`) | `api` y `mlflow` | `SERVING_API_URL`, `MLFLOW_TRACKING_URI` | versión servida, predicciones de referencia del run y `POST /predict` con fotos del test |
 | `export.py` / `promote.py` (host) | `mlflow` | `http://localhost:5000` | descargar la versión a desplegar (escribe en `deploy/serving/models/`, no habla con TF Serving) |
 
 ```

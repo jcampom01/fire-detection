@@ -1,8 +1,8 @@
 # 09 — Registro de modelos y promoción
 
 > Estado: `fire-detector` con 3 versiones y **v3 (`efficientnetb4_clahe`) en `@production`**, promovida con
-> [`src/registry/promote.py`](../src/registry/promote.py). Pendiente: la API de inferencia, que cargará
-> `models:/fire-detector@production`.
+> [`src/registry/promote.py`](../src/registry/promote.py). `deploy` y `rollback` llegan solos a TF Serving y se
+> verifican contra el entrenamiento ([10_serving.md](10_serving.md)); ciclo real v3 → v1 → v3 hecho (simulacro).
 >
 > Cómo llegan las versiones al registro: [08_experiment_tracking.md](08_experiment_tracking.md).
 
@@ -117,17 +117,23 @@ Para servir una versión lanza [`export.py`](../src/registry/export.py) como pro
 |---|---|
 | `status` | versiones, métrica de comparación, `test.recall`, resultado del gate y alias; además `@production = v3   served = v3   OK` o `DRIFT`, preguntando a la API qué versión sirve |
 | `stage [--version N]` | gate sobre la versión (por defecto, la última). Graba el resultado en tags **también si falla** y, si pasa, mueve `@staging`. Si falla, sale con código 1 (útil en CI) |
-| `deploy` | exige `@staging`; **repite el gate** contra el `@production` actual (puede haber cambiado); exporta la versión (antes de tocar alias); la saliente pasa a `@previous`; mueve `@production`; quita `@staging`; **activa la versión en TF Serving** |
-| `rollback` | exige `@previous`; `@production` vuelve a esa versión y **TF Serving la sirve** (ya exportada: solo cambia la config); quita `@previous` (no hay "anterior del anterior") |
+| `deploy` | exige `@staging`; **repite el gate** contra el `@production` actual (puede haber cambiado); exporta la versión (antes de tocar alias); la saliente pasa a `@previous`; mueve `@production`; quita `@staging`; **activa la versión en TF Serving**; espera a que se sirva y la **verifica** |
+| `rollback` | exige `@previous`; `@production` vuelve a esa versión y **TF Serving la sirve** (ya exportada: solo cambia la config); quita `@previous` (no hay "anterior del anterior"); espera y verifica |
 
-Opciones: `--env bcn` (alias `*_bcn` y tags con sufijo `_bcn`, para no mezclar historiales) y `--dry-run` (imprime
-`[dry-run] would …` sin cambiar nada; todas las escrituras pasan por un único método).
+Opciones:
+
+| opción | qué hace |
+|---|---|
+| `--env bcn` | alias `*_bcn` y tags con sufijo `_bcn`, para no mezclar historiales |
+| `--dry-run` | imprime `[dry-run] would …` sin cambiar nada; todas las escrituras pasan por un único método |
+| `--rules <fichero>` | otras reglas del gate; [`promotion_drill.json`](../src/registry/promotion_drill.json) no exige mejora, para ensayar `deploy`/`rollback` con una versión peor. El fichero usado queda en `gate.rules` |
+| `--verify N` | imágenes del test que se comprueban a través de la API tras `deploy`/`rollback` (por defecto 200, `0` lo salta); si falla, sale con código 1 y aconseja `rollback` ([10, S.5](10_serving.md#s5--verificación-de-extremo-a-extremo)) |
 
 Tags que deja:
 
 | cuándo | versión | tags |
 |---|---|---|
-| `stage` / gate | candidata | `gate.result`, `gate.reason`, `gate.compared_to`, `gate.checked_at` |
+| `stage` / gate | candidata | `gate.result`, `gate.reason`, `gate.compared_to`, `gate.rules`, `gate.checked_at` |
 | `deploy` | entrante | `promoted_at`, `replaced` |
 | `deploy` | saliente | `retired_at`, `replaced_by` (+ alias `@previous`) |
 | `rollback` | la que sale / la que vuelve | `rolled_back_at` / `restored_at` |
@@ -168,5 +174,6 @@ Con estas reglas, ni la v1 ni la v2 pueden sustituirla: tienen más falsas alarm
 
 - ~~API de inferencia que sirva `@production`~~ → hecho: [10_serving.md](10_serving.md); `deploy` y `rollback`
   llegan solos a TF Serving.
-- Un ciclo real de `deploy` / `rollback` con `promote.py` (S.5 de [10](10_serving.md)).
+- ~~Un ciclo real de `deploy` / `rollback` con `promote.py`~~ → hecho con `promotion_drill.json`
+  ([10, S.5](10_serving.md#s5--verificación-de-extremo-a-extremo)).
 - Regla de latencia en el gate: en CPU, B4 (v3) ~290 ms por imagen y MobileNet (v1) ~72 ms.

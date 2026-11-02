@@ -1,10 +1,10 @@
 # 10 — Servir el modelo con TF Serving
 
-> Estado: **S.1–S.3 hechos**. TF Serving + API (FastAPI) en
-> [`deploy/serving/docker-compose.yml`](../deploy/serving/docker-compose.yml); `promote.py deploy/rollback` exporta y
-> activa la versión automáticamente. La API reproduce las predicciones del entrenamiento desde la foto original y el
-> cambio de versión se hace sin errores ni *cold start*. Pendiente: prueba de extremo a extremo con todo el test y un
-> ciclo real de `deploy`/`rollback` (S.5).
+> Estado: **bloque de servicio completo (S.1–S.5)**. TF Serving + API (FastAPI) en
+> [`deploy/serving/docker-compose.yml`](../deploy/serving/docker-compose.yml); `promote.py deploy/rollback` exporta,
+> activa la versión, espera a que se sirva y la verifica contra el entrenamiento con
+> [`verify_serving.py`](../src/registry/verify_serving.py). La API reproduce las predicciones del entrenamiento desde
+> la foto original y el cambio de versión se hace sin errores ni *cold start*.
 
 ## Arquitectura
 
@@ -33,6 +33,7 @@ cliente ─POST /predict─► [ API :8080 ] ──REST (red interna)──► [
 | **API** (FastAPI + uvicorn, S.2) | validar, preparar la imagen como el dataset, llamar al modelo, **umbral**, responder | no lleva TensorFlow |
 | **TF Serving** | decodificar el JPEG y predecir; cargar la versión fijada en la config; cambiar sin cortes | no preprocesa, no aplica el umbral, no sabe qué es MLflow |
 | **`export.py`** (S.3) | descargar la versión, convertir a SavedModel con *warmup*, escribir la carpeta, fijar la versión | no sirve peticiones |
+| **`verify_serving.py`** (S.5) | mandar fotos del test a la API y compararlas con las predicciones del run en MLflow | no cambia nada: solo aprueba o suspende |
 
 Por qué separado (frente a una API que cargue el modelo):
 
@@ -430,8 +431,8 @@ la primera predicción real tarda ~300 ms.
 
 | comando | pasos |
 |---|---|
-| `deploy` | gate → `export.py --no-activate` (lento, puede fallar: **antes** de tocar alias) → alias y tags → `export.py` (activa) |
-| `rollback` | `export.py --no-activate` (normalmente ya exportada) → alias y tags → `export.py` (activa) |
+| `deploy` | gate → `export.py --no-activate` (lento, puede fallar: **antes** de tocar alias) → alias y tags → `export.py` (activa) → verificación (S.5) |
+| `rollback` | `export.py --no-activate` (normalmente ya exportada) → alias y tags → `export.py` (activa) → verificación (S.5) |
 | `status` | además de la tabla: `@production = v3   served = v3   OK` o `DRIFT`, preguntando a la API (`/model`) |
 | `--env <sitio>` | solo alias: el TF Serving de aquí es el entorno por defecto |
 | `--dry-run` | muestra también el comando de `export.py` que lanzaría |
@@ -453,10 +454,91 @@ con `export.py` (sin tocar alias):
 
 Estado final: sirviendo la v3 (= `@production`); exportadas la v1 y la v3.
 
+### S.5 — Verificación de extremo a extremo
+
+Desplegar no basta: `deploy` escribía la config y terminaba sin saber si TF Serving había cambiado de versión ni si
+respondía bien. Es la **verificación post-despliegue** (*smoke test*).
+
+**[`src/registry/verify_serving.py`](../src/registry/verify_serving.py)** prueba el servicio como lo usaría una
+cámara:
+
+1. pregunta a la API qué versión sirve y con qué umbral (`GET /model`): se comprueba **lo servido**, no el alias;
+2. descarga de MLflow las predicciones de test del run de esa versión (`predictions/predictions_test.csv`); la
+   referencia sale del registro, no de `results/`, así vale para cualquier versión;
+3. manda las **fotos originales** a `POST /predict` (4 peticiones a la vez, `--workers`); `--limit N` toma N imágenes
+   repartidas por todo el test;
+4. aplica los criterios y sale con **código 1 si alguno falla** (puede bloquear un deploy o un pipeline de CI).
+
+| criterio | regla por defecto | detecta |
+|---|---|---|
+| media de \|diferencia\| | ≤ 0,001 (`--max-mean`) | desajuste sistemático (por ejemplo, olvidar el CLAHE) |
+| percentil 95 | ≤ 0,005 (`--max-p95`) | desajuste en una parte de las imágenes |
+| cambios de decisión | solo si la prob. del entrenamiento está a < 0,01 del umbral (`--near`) | lejos del umbral es un error; pegado a él, ruido CPU/GPU |
+| versión | todas las respuestas de la misma | un despliegue a mitad de la prueba invalida el resultado |
+
+El máximo se imprime solo como información (S.1.e).
+
+**Dos errores del primer intento**, útiles como lección:
+
+- `latency_ms` de la API es `{"preprocess", "model"}`, no un número.
+- En `predictions_test.csv` la columna `alarm` es la **etiqueta real**, no la decisión: la prueba contó como
+  "cambios" los 10 fallos del modelo en la muestra (por ejemplo, 0,9929 frente a 0,9927, ambos sobre el umbral). La
+  decisión de referencia es `prob ≥ umbral`. Un nombre de columna ambiguo hizo suspender un servicio correcto.
+
+Resultado con la v3 y 200 imágenes:
+
+| | valor |
+|---|---:|
+| media / p95 / máx. de \|diferencia\| | 0,00022 / 0,00136 / 0,00336 |
+| cambios de decisión | 0 |
+| rendimiento con 4 peticiones a la vez | 5,3 img/s (frente a ~3 de una en una) |
+| latencia dentro de la API (p50) | preparación 31 ms · modelo 716 ms |
+
+En paralelo cada petición tarda más (se reparten la CPU) pero salen más imágenes por segundo: el compromiso
+latencia/rendimiento que medirá Locust. Casi todo el coste es el modelo B4; la preparación son ~30 ms.
+
+**Integrado en `promote.py`:** al final de `deploy` y `rollback`, la función `verify()`:
+
+1. **espera** a que `GET /model` diga la versión nueva (cada 2 s, máximo 180 s); si no llega, falla indicando mirar
+   los logs de TF Serving;
+2. lanza `verify_serving.py --limit 200` (~40 s; `--verify N` para cambiarlo, `0` para saltarlo);
+3. si falla, sale con código 1 y aconseja `rollback`. **No vuelve atrás solo:** quitar un modelo de producción es una
+   decisión de una persona (o de CI).
+
+No se ejecuta con `--dry-run` ni con `--env` (ese entorno no es el TF Serving de aquí).
+
+**Ciclo real `deploy` / `rollback`.** Con las reglas reales ninguna versión puede sustituir a la v3 (todas tienen más
+falsas alarmas en val), así que se añadió `--rules <fichero>` y
+[`promotion_drill.json`](../src/registry/promotion_drill.json): los mismos suelos de test, sin exigir mejora
+(`min_improvement: -1`). El gate anota el fichero usado en `gate.rules`, así un simulacro no se confunde con una
+promoción real.
+
+```bash
+P=".venv/bin/python src/registry/promote.py"
+$P stage --version 1 --rules src/registry/promotion_drill.json
+$P deploy --rules src/registry/promotion_drill.json
+$P status          # @production = v1   served = v1   OK
+$P rollback
+$P status          # @production = v3   served = v3   OK
+```
+
+| hora (UTC) | paso | rastro en el registro |
+|---|---|---|
+| 19:36:05 | `stage` **sin** `--rules`: rechazada (−0,0044 de mejora) | `gate.result=failed` (luego sobrescrito) |
+| 19:36:57 | `stage` con el simulacro: aprobada, `@staging = v1` | v1: `gate.rules=promotion_drill.json` |
+| 19:37:26 | `deploy`: `@production = v1`, `@previous = v3`, servida y verificada | v1: `promoted_at`, `replaced=v3` · v3: `retired_at`, `replaced_by=v1` |
+| 19:38:24 | `rollback`: `@production = v3`, sin `@previous`, servida y verificada | v1: `rolled_back_at` · v3: `restored_at` |
+
+El primer intento muestra el gate funcionando: sin `--rules` (la variable de la shell no estaba definida) se aplicaron
+las reglas reales y la v1 no pasó.
+
+Estado final: igual que al empezar (`@production = v3`, servida, sin `@staging` ni `@previous`), con el historial en
+las etiquetas.
+
 ## Siguientes pasos
 
-- **S.5** — Prueba de extremo a extremo con todo el test a través de la API (criterio: media/p95 de la diferencia y
-  cambios de decisión solo junto al umbral) y un ciclo real de `promote.py deploy` / `rollback`.
+- Prueba con las 4.306 imágenes (~14 min): `verify_serving.py` sin `--limit`. No se ha lanzado; la muestra de 200
+  cubre el criterio y el ciclo de despliegue.
 - Regla de latencia en el gate (B4 ~290 ms frente a MobileNet ~72 ms en CPU).
 - Robustez del modelo a la compresión JPEG (reentrenar con variaciones de calidad).
 - Pesos del SavedModel mayores de lo esperado (141 MB frente a ~71 MB).
