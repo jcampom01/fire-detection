@@ -109,15 +109,16 @@ API. Se decidirá al medir la API (B4 es ~15 veces más lenta que MobileNet).
 
 ## `promote.py`
 
-En `src/registry/`, separado de `src/train/`: no entrena ni importa TensorFlow, solo lee métricas y mueve alias
-(~2 s). No descarga modelos ni comprueba que funcionen en la API: eso es la prueba en `@staging`.
+En `src/registry/`, separado de `src/train/`: no entrena ni importa TensorFlow; lee métricas y mueve alias (~2 s).
+Para servir una versión lanza [`export.py`](../src/registry/export.py) como proceso aparte (ver
+[10_serving.md](10_serving.md#s3--despliegue-automático)).
 
 | comando | qué hace |
 |---|---|
-| `status` | versiones, métrica de comparación, `test.recall`, resultado del gate y alias |
+| `status` | versiones, métrica de comparación, `test.recall`, resultado del gate y alias; además `@production = v3   served = v3   OK` o `DRIFT`, preguntando a la API qué versión sirve |
 | `stage [--version N]` | gate sobre la versión (por defecto, la última). Graba el resultado en tags **también si falla** y, si pasa, mueve `@staging`. Si falla, sale con código 1 (útil en CI) |
-| `deploy` | exige `@staging`; **repite el gate** contra el `@production` actual (puede haber cambiado); la saliente pasa a `@previous`; mueve `@production`; quita `@staging` |
-| `rollback` | exige `@previous`; `@production` vuelve a esa versión; quita `@previous` (no hay "anterior del anterior") |
+| `deploy` | exige `@staging`; **repite el gate** contra el `@production` actual (puede haber cambiado); exporta la versión (antes de tocar alias); la saliente pasa a `@previous`; mueve `@production`; quita `@staging`; **activa la versión en TF Serving** |
+| `rollback` | exige `@previous`; `@production` vuelve a esa versión y **TF Serving la sirve** (ya exportada: solo cambia la config); quita `@previous` (no hay "anterior del anterior") |
 
 Opciones: `--env bcn` (alias `*_bcn` y tags con sufijo `_bcn`, para no mezclar historiales) y `--dry-run` (imprime
 `[dry-run] would …` sin cambiar nada; todas las escrituras pasan por un único método).
@@ -165,6 +166,7 @@ Con estas reglas, ni la v1 ni la v2 pueden sustituirla: tienen más falsas alarm
 
 ## Siguientes pasos
 
-- API de inferencia que cargue `@production`. La descarga desde el host ya funciona: el modelo de la v3 (174 MB) se
-  descarga en 0,6 s (ver incidencias de [06_mlops.md](06_mlops.md)).
-- Medir la velocidad de la v3 en la API y decidir si entra en el gate.
+- ~~API de inferencia que sirva `@production`~~ → hecho: [10_serving.md](10_serving.md); `deploy` y `rollback`
+  llegan solos a TF Serving.
+- Un ciclo real de `deploy` / `rollback` con `promote.py` (S.5 de [10](10_serving.md)).
+- Regla de latencia en el gate: en CPU, B4 (v3) ~290 ms por imagen y MobileNet (v1) ~72 ms.

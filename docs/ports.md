@@ -19,7 +19,8 @@ Stack `deploy/serving` (proyecto Compose `fire-serving`, red `fire-serving_defau
 
 | servicio | puerto | protocolo | publicado en el host | URL / uso |
 |---|---:|---|---|---|
-| `tf-serving` | 8501 | HTTP (REST) | `127.0.0.1:8501` (pruebas; pasará a solo red interna con la API) | `GET /v1/models/fire_detector` · `POST /v1/models/fire_detector/versions/<v>:predict` |
+| `api` | 8080 | HTTP | `127.0.0.1:8080` | `POST /predict` · `GET /model` · `/health` · `/ready` · `/docs`: http://localhost:8080/docs |
+| `tf-serving` | 8501 | HTTP (REST) | no, solo red interna | `http://tf-serving:8501/v1/models/fire_detector/versions/<v>:predict` |
 | `tf-serving` | 8500 | gRPC | no | clientes gRPC dentro de la red |
 
 ## Conexiones
@@ -35,7 +36,10 @@ Stack `deploy/serving` (proyecto Compose `fire-serving`, red `fire-serving_defau
 | `dvc` (host) | `rustfs` | `http://localhost:9000`, bucket `datasets` | subir y bajar versiones del dataset (cliente S3 directo, sin proxy) |
 | navegador (host) | `adminer` | `http://localhost:8081` | inspeccionar las tablas de MLflow |
 | `adminer` | `postgres` | `postgres:5432` dentro de la red | consultas (Postgres sigue sin puerto publicado) |
-| scripts de prueba (host) | `tf-serving` | `http://127.0.0.1:8501` | predecir y comprobar el modelo servido |
+| aplicación / `curl` (host) | `api` | `http://127.0.0.1:8080` | predecir (`POST /predict`, multipart) |
+| `api` | `tf-serving` | `http://tf-serving:8501` dentro de la red `fire-serving_default` | versión servida y predicción (JPEG en `{"b64": ...}`) |
+| `promote.py status` (host) | `api` | `http://127.0.0.1:8080/model` (`SERVING_API_URL`) | versión servida, para detectar drift |
+| `export.py` / `promote.py` (host) | `mlflow` | `http://localhost:5000` | descargar la versión a desplegar (escribe en `deploy/serving/models/`, no habla con TF Serving) |
 
 ```
                       HOST (WSL2)
@@ -60,7 +64,6 @@ Según el plan de [05_deployment.md](05_deployment.md):
 
 | servicio | puerto | publicado | uso |
 |---|---:|---|---|
-| `api` (stack `fire-serving`) | 8080 | sí | `POST /predict`, `/health`, `/metrics` |
 | `prometheus` | 9090 | sí | métricas |
 | `grafana` | 3000 | sí | dashboards |
 | `locust` | 8089 | sí | pruebas de carga |

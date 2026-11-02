@@ -23,13 +23,17 @@
 | **Matplotlib** | Gráficas de entrenamiento y evaluación. |
 | **Jupyter (ipykernel)** | Notebooks de EDA y comparación de resultados. |
 | **TensorFlow Serving** | Servidor de modelos (C++): carga el SavedModel y responde predicciones por REST/gRPC; cambia de versión sin cortes. |
+| **tensorflow-serving-api** | Formatos de petición de TF Serving en Python; aquí, para escribir las peticiones de *warmup* al exportar. |
+| **FastAPI** | Framework de la API de inferencia: rutas, validación de la petición, respuestas JSON y documentación automática (`/docs`). |
+| **uvicorn** | Servidor web (ASGI) que ejecuta la app de FastAPI: abre el puerto y gestiona las conexiones HTTP. |
+| **httpx** | Cliente HTTP de Python; la API lo usa para hablar con TF Serving. |
+| **python-multipart** | Lee los formularios `multipart/form-data`: lo usa FastAPI para recibir la imagen subida. |
 | **draw.io** | Diagramas de arquitectura ([mlops_architecture.drawio](mlops_architecture.drawio)). |
 
 ## Previstas
 
 | herramienta | para qué servirá |
 |---|---|
-| **FastAPI** | API de inferencia: preproceso, llamada al modelo, umbral y endpoints `/predict`, `/health`, `/metrics`. |
 | **Prometheus** | Recoge métricas de los servicios (latencia, peticiones, alarmas). |
 | **Grafana** | Dashboards y alertas sobre las métricas de Prometheus. |
 | **Evidently** | Detección de drift comparando las predicciones de producción con las de referencia. |

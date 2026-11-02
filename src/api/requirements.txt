@@ -1,0 +1,7 @@
+# Inference API dependencies (no TensorFlow: the model runs in TF Serving)
+fastapi==0.162.0
+uvicorn==0.54.0
+python-multipart==0.0.33    # file uploads (multipart/form-data)
+httpx==0.28.1               # HTTP client to TF Serving
+opencv-python-headless==5.0.0.93
+numpy==2.5.4

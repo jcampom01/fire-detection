@@ -37,6 +37,8 @@ from pathlib import Path
 import cv2
 from tqdm import tqdm
 
+from clahe import apply_clahe  # shared with the inference API
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = Path(__file__).resolve().parent / "clahe_config.json"
 
@@ -58,14 +60,6 @@ def load_config(path=CONFIG_PATH):
         cfg[key] = PROJECT_ROOT / cfg[key]  # an absolute path in the config is kept as-is
     return cfg
 
-
-def apply_clahe(img_bgr, clip_limit, tile_grid):
-    """Apply CLAHE to the L channel of a BGR image and return a BGR image."""
-    lab = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2LAB)
-    l, a, b = cv2.split(lab)
-    clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=(tile_grid, tile_grid))
-    lab = cv2.merge((clahe.apply(l), a, b))
-    return cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
 
 
 def process_image(src, dst, clip_limit, tile_grid, jpeg_quality, overwrite):

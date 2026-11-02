@@ -1,15 +1,20 @@
 name: fire-serving
 
+# Prerequisite: an exported model and models.config in ./models (python src/registry/export.py)
+
 services:
-  # --- Model server: serves the SavedModel versions in ./models/fire_detector/<version>/ ---
+  # --- Model server: serves the version pinned in ./models/models.config ---
   tf-serving:
     image: tensorflow/serving:2.21.0  # same version as the TensorFlow used to export
-    environment:
-      MODEL_NAME: fire_detector  # serves /models/fire_detector (entrypoint: --model_base_path=/models/$MODEL_NAME)
+    entrypoint: ["tensorflow_model_server"]
+    command:
+      - --port=8500
+      - --rest_api_port=8501
+      - --model_config_file=/models/models.config
+      - --model_config_file_poll_wait_seconds=5  # re-read the config: a deploy/rollback switches the version
     volumes:
       - ./models:/models:ro  # written by the deploy step, never by the server
-    ports:
-      - "127.0.0.1:8501:8501"  # REST, for manual tests; internal only once the API is in front
+    # No ports: only the API talks to it, inside the compose network
     healthcheck:
       # No curl/wget in the image: plain HTTP request through bash's /dev/tcp
       test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8501 && printf 'GET /v1/models/fire_detector HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q AVAILABLE <&3"]
@@ -17,3 +22,23 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
+
+  # --- Inference API: prepares the image, asks tf-serving, applies the threshold ---
+  api:
+    build:
+      context: ../..  # repository root: the image needs src/api and src/preprocess/clahe.py
+      dockerfile: deploy/serving/api.Dockerfile
+    image: fire-serving/api:0.1.0
+    depends_on:
+      tf-serving:
+        condition: service_healthy
+    volumes:
+      - ./models:/models:ro  # meta.json of each version
+    ports:
+      - "127.0.0.1:8080:8080"  # the entry point for the application, only from this machine
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/ready')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s

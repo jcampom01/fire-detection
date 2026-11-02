@@ -1,7 +1,8 @@
 # 05 — Despliegue (plan)
 
 > Estado: **en curso**. Registro de modelos hecho ([09](09_model_registry.md)); v3 en `@production`, servida con
-> TF Serving ([10_serving.md](10_serving.md)). Pendiente: la API.
+> TF Serving detrás de una API FastAPI y desplegada automáticamente con `promote.py` ([10_serving.md](10_serving.md)).
+> Pendiente: la prueba de extremo a extremo con todo el test.
 >
 > **Cambio de plan:** este documento proponía una API que cargaba el modelo ella misma. Se ha cambiado a **API y
 > servidor de modelos (TF Serving) en contenedores separados**, con la conversión a SavedModel al hacer `deploy`. Lo
@@ -81,8 +82,8 @@ función CLAHE del preprocesado), para que entrenamiento y servicio no procesen 
 ## Hoja de ruta
 
 1. ~~**Registro de modelos**~~ → hecho: MLflow + Postgres + RustFS ([06](06_mlops.md), [08](08_experiment_tracking.md), [09](09_model_registry.md)).
-2. **Servicio en contenedores** (en curso, [10_serving.md](10_serving.md)): TF Serving ✅ + API FastAPI + despliegue
-   desde `@production` + prueba de extremo a extremo con el test.
+2. **Servicio en contenedores** (en curso, [10_serving.md](10_serving.md)): TF Serving ✅ + API FastAPI ✅ + despliegue
+   automático desde `@production` ✅ + prueba de extremo a extremo con el test (pendiente).
 3. **Observabilidad:** Prometheus + Grafana, simulador de cámaras y Locust.
 4. **Kubernetes:** kind, Deployment, Service, HPA, canary entre versiones (por ejemplo, B4 v3 frente a MobileNet).
 5. **CI/CD:** GitHub Actions con un umbral mínimo de PR-AUC para dejar pasar el modelo.

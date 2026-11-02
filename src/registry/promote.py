@@ -7,13 +7,18 @@ Validation metrics are used to compare (the decision threshold fixes val recall 
 false alarms); test metrics only as a sanity floor, so the choice is not tuned to the test set.
 
 Commands:
-    status      versions, their aliases, key metrics and last gate result
+    status      versions, their aliases, key metrics and last gate result; served version vs @production (drift)
     stage       run the gate on a version (default: latest) and, if it passes, move @staging to it
-    deploy      re-run the gate on @staging and move @production to it; the outgoing version gets @previous
-    rollback    move @production back to @previous
+    deploy      re-run the gate on @staging, export it for TF Serving, move @production to it and serve it;
+                the outgoing version gets @previous
+    rollback    move @production back to @previous and serve it (already exported: only the config changes)
+
+Deploying to TF Serving runs src/registry/export.py in a separate process, so this script never loads TensorFlow.
+The export (slow, may fail) happens before any alias moves; activating the version is the last step.
 
 Aliases (MLflow keeps no alias history, so every move also leaves tags on the versions):
-    production / staging / previous, or production_<env> / staging_<env> / previous_<env> with --env
+    production / staging / previous, or production_<env> / staging_<env> / previous_<env> with --env.
+    TF Serving here is the default environment: with --env only the aliases move (that site deploys on its own).
 
 Usage:
     python src/registry/promote.py status
@@ -24,6 +29,8 @@ Usage:
 import argparse
 import json
 import os
+import subprocess
+import sys
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -35,7 +42,9 @@ from mlflow import MlflowClient  # noqa: E402
 from mlflow.exceptions import MlflowException  # noqa: E402
 
 RULES_PATH = Path(__file__).resolve().parent / "promotion.json"
+EXPORT_SCRIPT = Path(__file__).resolve().parent / "export.py"
 DEFAULT_TRACKING_URI = "http://localhost:5000"
+DEFAULT_SERVING_API_URL = "http://127.0.0.1:8080"
 
 
 def now():
@@ -159,6 +168,20 @@ def cmd_status(reg, rules, args):
               f"{m.get('test.recall', float('nan')):>13.4f}  {gate_result:<8}"
               f"{' '.join('@' + a for a in sorted(aliases.get(v.version, [])))}")
 
+    if reg.suffix:
+        return
+    # Drift: does the service run what the registry says? (the alias could have been moved from the UI)
+    production = reg.by_alias(reg.production)
+    url = os.environ.get("SERVING_API_URL", DEFAULT_SERVING_API_URL)
+    try:
+        served = json.load(urllib.request.urlopen(f"{url}/model", timeout=5))["version"]
+    except OSError as e:
+        print(f"\nserved: unknown, the API at {url} does not answer ({e})")
+        return
+    expected = int(production.version) if production else None
+    state = "OK" if served == expected else "DRIFT: run `deploy` or `rollback`, or export.py --version <v>"
+    print(f"\n@{reg.production} = v{expected}   served = v{served}   {state}")
+
 
 def cmd_stage(reg, rules, args):
     candidate = reg.version(args.version) if args.version else reg.versions()[-1]
@@ -187,6 +210,7 @@ def cmd_deploy(reg, rules, args):
         raise SystemExit(1)
 
     print("\nPASSED:")
+    serve(reg, staging, activate=False)  # slow and may fail: before any alias moves
     stamp = now()
     if production:
         reg.set_alias(reg.previous, production)
@@ -194,6 +218,7 @@ def cmd_deploy(reg, rules, args):
     reg.set_alias(reg.production, staging)
     reg.tag(staging, promoted_at=stamp, replaced=f"v{production.version}" if production else "none")
     reg.delete_alias(reg.staging)
+    serve(reg, staging)
 
 
 def cmd_rollback(reg, rules, args):
@@ -203,12 +228,28 @@ def cmd_rollback(reg, rules, args):
     production = reg.by_alias(reg.production)
 
     print(f"rollback @{reg.production}: v{production.version if production else '-'} -> v{previous.version}")
+    serve(reg, previous, activate=False)  # normally already exported: nothing to do
     stamp = now()
     if production:
         reg.tag(production, rolled_back_at=stamp)
     reg.set_alias(reg.production, previous)
     reg.tag(previous, restored_at=stamp)
     reg.delete_alias(reg.previous)
+    serve(reg, previous)
+
+
+def serve(reg, version, activate=True):
+    """Run export.py for this version: export it (if needed) and, with activate, make TF Serving serve it."""
+    if reg.suffix:
+        if activate:
+            print(f"   (--env {reg.suffix[1:]}: aliases only, TF Serving here is not that environment)")
+        return
+    cmd = [sys.executable, str(EXPORT_SCRIPT), "--version", str(version.version)]
+    if not activate:
+        cmd.append("--no-activate")
+    print(f"   {'[dry-run] would run' if reg.dry_run else 'running'}: {' '.join(cmd[1:])}")
+    if not reg.dry_run:
+        subprocess.run(cmd, check=True)
 
 
 def check_server(uri):

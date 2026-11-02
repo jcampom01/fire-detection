@@ -43,6 +43,7 @@ EXPERIMENT = "fire-detection"
 REGISTERED_MODEL = "fire-detector"
 DEFAULT_TRACKING_URI = "http://localhost:5000"
 CLAHE_CONFIG = PROJECT_ROOT / "src/preprocess/clahe_config.json"
+RESIZE_CONFIG = PROJECT_ROOT / "src/preprocess/resize_config.json"
 # Source dataset versioned with DVC. The derived datasets (labels, CLAHE, resized) are not versioned:
 # they follow from this one + the preprocessing configs at the logged git commit.
 DVC_SOURCE = PROJECT_ROOT / "data/original_dataset.dvc"
@@ -165,6 +166,8 @@ def model_metadata(cfg, results):
         "preprocessing": {
             "clahe": clahe,
             "resize": {"size": cfg["image_size"], "interpolation": "cv2.INTER_AREA", "keep_aspect_ratio": False},
+            # The dataset scripts write a JPEG after CLAHE and after resizing: serving must do the same
+            "jpeg_quality": json.loads(RESIZE_CONFIG.read_text())["jpeg_quality"],
             "input": "RGB, float32 in 0-255 (the model normalizes internally)",
         },
         "output": "probability of alarm (fire and/or smoke); alarm if prob >= threshold",

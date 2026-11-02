@@ -1,0 +1,5 @@
+# Build context is the whole repository (data/ alone is ~11 GB): send only what the image copies
+*
+!src/api/
+!src/preprocess/clahe.py
+**/__pycache__
