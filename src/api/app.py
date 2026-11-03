@@ -5,6 +5,7 @@ a JPEG write at the dataset quality. The final JPEG bytes are sent to TF Serving
 TensorFlow, as in training (see src/registry/export.py for why).
 
 Endpoints:
+    GET  /          web page: drop an image and see the prediction (static/index.html, calls /model and /predict)
     POST /predict   image file -> {prob, alarm, threshold, model_version, latency_ms}
     GET  /model     version being served and its metadata
     GET  /health    liveness: the process is up (never calls TF Serving)
@@ -28,12 +29,14 @@ import cv2
 import httpx
 import numpy as np
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 
 from preprocess.clahe import apply_clahe  # same function used to build the training dataset
 
 TF_SERVING_URL = os.environ.get("TF_SERVING_URL", "http://127.0.0.1:8501")
 MODEL_NAME = os.environ.get("MODEL_NAME", "fire_detector")
 MODELS_DIR = Path(os.environ.get("MODELS_DIR", "deploy/serving/models"))
+STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 log = logging.getLogger("api")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -134,6 +137,11 @@ def predict(file: UploadFile = File(...)):
     log.info("predict file=%s version=%d prob=%.4f alarm=%s latency_ms=%d",
              file.filename, version, prob, result["alarm"], round((t2 - t0) * 1000))
     return result
+
+
+@app.get("/", include_in_schema=False)
+def index():
+    return FileResponse(STATIC_DIR / "index.html")
 
 
 @app.get("/model")

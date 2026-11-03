@@ -28,7 +28,7 @@ services:
     build:
       context: ../..  # repository root: the image needs src/api and src/preprocess/clahe.py
       dockerfile: deploy/serving/api.Dockerfile
-    image: fire-serving/api:0.1.0
+    image: fire-serving/api:1.0.0
     depends_on:
       tf-serving:
         condition: service_healthy

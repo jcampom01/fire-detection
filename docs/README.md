@@ -46,7 +46,7 @@ src/
 ├── train/                            entrenamiento, evaluación, tracking en MLflow e importación de runs
 │   └── configs/                      un JSON por experimento (modelo × dataset)
 ├── registry/                         promoción de modelos (alias), sus reglas, exportación a TF Serving y verificación
-└── api/                              API de inferencia (FastAPI)
+└── api/                              API de inferencia (FastAPI) y página web (static/)
 results/<experimento>/                salidas de cada entrenamiento
 deploy/mlops/                         plataforma MLOps (docker-compose: MLflow, Postgres, RustFS)
 deploy/serving/                       servicio de inferencia (docker-compose: TF Serving + API)

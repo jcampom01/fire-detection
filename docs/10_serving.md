@@ -1,6 +1,6 @@
 # 10 — Servir el modelo con TF Serving
 
-> Estado: **bloque de servicio completo (S.1–S.5)**. TF Serving + API (FastAPI) en
+> Estado: **bloque de servicio completo (S.1–S.6), v1.0.0** con página web en http://localhost:8080. TF Serving + API (FastAPI) en
 > [`deploy/serving/docker-compose.yml`](../deploy/serving/docker-compose.yml); `promote.py deploy/rollback` exporta,
 > activa la versión, espera a que se sirva y la verifica contra el entrenamiento con
 > [`verify_serving.py`](../src/registry/verify_serving.py). La API reproduce las predicciones del entrenamiento desde
@@ -534,6 +534,21 @@ las reglas reales y la v1 no pasó.
 
 Estado final: igual que al empezar (`@production = v3`, servida, sin `@staging` ni `@previous`), con el historial en
 las etiquetas.
+
+### S.6 — Página web (v1.0.0)
+
+Una página mínima para probar el servicio sin `curl`: http://localhost:8080. Se arrastra una imagen y se ve la decisión,
+la probabilidad frente al umbral, la versión y los tiempos de preparación (API) y de modelo (TF Serving). La cabecera
+muestra el modelo servido (`GET /model`) y se refresca tras cada predicción, así se ve un `deploy`/`rollback`.
+
+| decisión | por qué |
+|---|---|
+| la sirve la propia API (`GET /` → [`src/api/static/index.html`](../src/api/static/index.html)) | mismo origen que `/predict`: sin CORS ni otro contenedor; entra en la imagen sin tocar el Dockerfile |
+| HTML + JS sin librerías ni CDN | funciona sin internet y no hay nada que compilar |
+| `/` fuera de `/docs` (`include_in_schema=False`) | es la web, no parte de la API |
+| solo llama a la API, nunca a TF Serving | TF Serving sigue sin puerto publicado; la preparación y el umbral solo existen en un sitio |
+
+Imagen de la API: `fire-serving/api:1.0.0` (antes `0.1.0`).
 
 ## Siguientes pasos
 

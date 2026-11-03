@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fire detection</title>
+<style>
+  :root { --red: #c0392b; --green: #2e7d32; --grey: #6b6b6b; --line: #ddd; }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, sans-serif; margin: 0; background: #f6f6f6; color: #222; }
+  main { max-width: 760px; margin: 0 auto; padding: 24px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .model { color: var(--grey); font-size: 13px; margin-bottom: 20px; }
+  .model.error { color: var(--red); }
+  #drop { border: 2px dashed #aaa; border-radius: 10px; background: #fff; padding: 36px; text-align: center;
+          cursor: pointer; color: var(--grey); transition: border-color .15s, background .15s; }
+  #drop.over { border-color: #333; background: #fafafa; }
+  #drop img { max-width: 100%; max-height: 360px; border-radius: 6px; display: block; margin: 0 auto; }
+  #result { margin-top: 20px; background: #fff; border-radius: 10px; padding: 20px; display: none; }
+  .verdict { font-size: 26px; font-weight: 700; }
+  .verdict.alarm { color: var(--red); }
+  .verdict.ok { color: var(--green); }
+  .bar { position: relative; height: 14px; background: #eee; border-radius: 7px; margin: 16px 0 4px; }
+  .bar .fill { height: 100%; border-radius: 7px; }
+  .bar .threshold { position: absolute; top: -4px; width: 2px; height: 22px; background: #222; }
+  .scale { display: flex; justify-content: space-between; font-size: 12px; color: var(--grey); }
+  table { border-collapse: collapse; margin-top: 14px; font-size: 14px; }
+  td { padding: 3px 16px 3px 0; }
+  td:first-child { color: var(--grey); }
+  .error { color: var(--red); }
+  footer { margin-top: 20px; font-size: 12px; color: var(--grey); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Detección de incendios</h1>
+  <div class="model" id="model">consultando el modelo…</div>
+
+  <div id="drop">
+    <p>Arrastra una imagen aquí o haz clic para elegirla</p>
+  </div>
+  <input type="file" id="file" accept="image/*" hidden>
+
+  <div id="result"></div>
+
+  <footer>Llama a <code>POST /predict</code> de esta API, que prepara la imagen y pide la predicción a TF Serving ·
+    <a href="/docs">/docs</a></footer>
+</main>
+
+<script>
+const drop = document.getElementById("drop");
+const input = document.getElementById("file");
+const result = document.getElementById("result");
+const modelInfo = document.getElementById("model");
+
+// --- Served model ---
+async function loadModel() {
+  try {
+    const r = await fetch("/model");
+    if (!r.ok) throw new Error((await r.json()).detail || r.status);
+    const { version, meta } = await r.json();
+    const clahe = meta.preprocessing.clahe ? "con CLAHE" : "sin CLAHE";
+    modelInfo.className = "model";
+    modelInfo.textContent = `Modelo v${version} · ${meta.image_size}px ${clahe} · umbral ${meta.threshold.toFixed(4)}`;
+  } catch (e) {
+    modelInfo.className = "model error";
+    modelInfo.textContent = `El modelo no está disponible (${e.message})`;
+  }
+}
+
+// --- Image input ---
+drop.addEventListener("click", () => input.click());
+input.addEventListener("change", () => input.files[0] && predict(input.files[0]));
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", e => {
+  e.preventDefault();
+  drop.classList.remove("over");
+  if (e.dataTransfer.files[0]) predict(e.dataTransfer.files[0]);
+});
+
+// --- Prediction ---
+async function predict(file) {
+  drop.innerHTML = "";
+  const img = document.createElement("img");
+  img.src = URL.createObjectURL(file);
+  drop.appendChild(img);
+  show(`<p>Analizando ${escape(file.name)}…</p>`);
+
+  const form = new FormData();
+  form.append("file", file);
+  try {
+    const r = await fetch("/predict", { method: "POST", body: form });
+    const body = await r.json();
+    if (!r.ok) throw new Error(`${r.status}: ${body.detail}`);
+    render(body);
+    loadModel();  // the served version may have changed (deploy / rollback)
+  } catch (e) {
+    show(`<p class="error">Error: ${escape(e.message)}</p>`);
+  }
+}
+
+function render(r) {
+  const pct = (r.prob * 100).toFixed(1);
+  const color = r.alarm ? "var(--red)" : "var(--green)";
+  show(`
+    <div class="verdict ${r.alarm ? "alarm" : "ok"}">${r.alarm ? "🔥 ALARMA" : "Sin alarma"}</div>
+    <div class="bar">
+      <div class="fill" style="width:${pct}%; background:${color}"></div>
+      <div class="threshold" style="left:${r.threshold * 100}%" title="umbral"></div>
+    </div>
+    <div class="scale"><span>0</span><span>probabilidad ${r.prob.toFixed(4)} · umbral ${r.threshold.toFixed(4)}</span><span>1</span></div>
+    <table>
+      <tr><td>versión del modelo</td><td>v${r.model_version}</td></tr>
+      <tr><td>preparación (API)</td><td>${r.latency_ms.preprocess} ms</td></tr>
+      <tr><td>modelo (TF Serving)</td><td>${r.latency_ms.model} ms</td></tr>
+    </table>`);
+}
+
+function show(html) { result.style.display = "block"; result.innerHTML = html; }
+function escape(s) { return String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`); }
+
+loadModel();
+</script>
+</body>
+</html>

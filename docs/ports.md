@@ -19,7 +19,7 @@ Stack `deploy/serving` (proyecto Compose `fire-serving`, red `fire-serving_defau
 
 | servicio | puerto | protocolo | publicado en el host | URL / uso |
 |---|---:|---|---|---|
-| `api` | 8080 | HTTP | `127.0.0.1:8080` | `POST /predict` · `GET /model` · `/health` · `/ready` · `/docs`: http://localhost:8080/docs |
+| `api` | 8080 | HTTP | `127.0.0.1:8080` | página web: http://localhost:8080 · `POST /predict` · `GET /model` · `/health` · `/ready` · `/docs` |
 | `tf-serving` | 8501 | HTTP (REST) | no, solo red interna | `http://tf-serving:8501/v1/models/fire_detector/versions/<v>:predict` |
 | `tf-serving` | 8500 | gRPC | no | clientes gRPC dentro de la red |
 
