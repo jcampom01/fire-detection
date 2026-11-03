@@ -9,14 +9,14 @@ como base para practicar un despliegue MLOps completo.
 | [02_preprocessing.md](02_preprocessing.md) | Etiquetas de clasificación, CLAHE y redimensionado |
 | [03_training.md](03_training.md) | Pipeline de entrenamiento, modelos, configs y artefactos generados |
 | [04_results.md](04_results.md) | Resultados obtenidos y comparación entre modelos |
-| [05_deployment.md](05_deployment.md) | Arquitectura de inferencia y plan de despliegue MLOps |
-| [06_mlops.md](06_mlops.md) | Plataforma MLOps: MLflow + Postgres + RustFS en Docker |
-| [07_data_versioning.md](07_data_versioning.md) | Versionado de datos con DVC: conceptos y pasos realizados |
-| [08_experiment_tracking.md](08_experiment_tracking.md) | Tracking de experimentos con MLflow: conceptos y prueba de humo |
-| [09_model_registry.md](09_model_registry.md) | Registro de modelos: alias, gate y promoción con `promote.py` |
-| [10_serving.md](10_serving.md) | Servir el modelo: TF Serving, API, preparación fiel al entrenamiento, despliegue automático y verificación |
+| [05_platform.md](05_platform.md) | Plataforma MLOps: MLflow + Postgres + RustFS en Docker |
+| [06_data_versioning.md](06_data_versioning.md) | Versionado de datos con DVC: qué se versiona, configuración y uso |
+| [07_experiment_tracking.md](07_experiment_tracking.md) | Tracking de experimentos con MLflow: qué registra cada run y operaciones |
+| [08_model_registry.md](08_model_registry.md) | Registro de modelos: alias, gate y promoción con `promote.py` |
+| [09_serving.md](09_serving.md) | Servir el modelo: TF Serving, API, preparación fiel al entrenamiento, despliegue automático y verificación |
 | [ports.md](ports.md) | Puertos en uso y conexiones entre servicios |
 | [tools.md](tools.md) | Herramientas del proyecto y para qué sirve cada una |
+| [learning/](learning/README.md) | Las herramientas en detalle: cómo funcionan por dentro, con ejemplos de este proyecto |
 
 ## Flujo general
 

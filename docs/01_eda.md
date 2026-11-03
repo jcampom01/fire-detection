@@ -4,7 +4,17 @@ Notebook: [src/eda/classes_analysis.ipynb](../src/eda/classes_analysis.ipynb)
 
 ## Dataset
 
-- Ubicación: `data/original_dataset/{train,val,test}/{images,labels}`.
+[**Smoke-Fire-Detection-YOLO**](https://www.kaggle.com/datasets/sayedgamal99/smoke-fire-detection-yolo) (Kaggle, Sayed
+Gamal, licencia **CC0: Public Domain**). Es una reorganización del dataset
+[D-Fire](https://github.com/gaiasd/DFireDataset) de GAIA, a la que añade un split de validación.
+
+Si se usa, el autor pide citar el artículo original de D-Fire:
+
+> P. V. A. B. de Venâncio, A. C. Lisboa, A. V. Barbosa. *An automatic fire detection system based on deep
+> convolutional neural networks for low-power, resource-constrained devices.* Neural Computing and Applications,
+> 34(18), 15349–15368, 2022. [doi:10.1007/s00521-022-07467-z](https://doi.org/10.1007/s00521-022-07467-z)
+
+- Ubicación: `data/original_dataset/{train,val,test}/{images,labels}`, versionado con DVC ([06](06_data_versioning.md)).
 - Formato de las etiquetas: **YOLO (detección)**. Cada imagen `X.jpg` tiene un `X.txt` con una línea por caja:
   `class x_center y_center width height` (coordenadas normalizadas).
 - Clases YOLO: `0 = smoke`, `1 = fire`.
@@ -70,6 +80,12 @@ Por eso las métricas de val y test son comparables, y elegir el umbral en val e
 
 1. **La tarea se plantea como clasificación binaria** (alarma sí o no) a nivel de imagen, a partir de las etiquetas de detección.
 2. **No hay que corregir el desbalance** en la tarea binaria.
-3. **`fire_only` es la categoría minoritaria (5 %)** y **`smoke_only` la difícil**: el humo sin llama es
-   visualmente ambiguo (niebla, nubes, polvo). Se evalúa por separado como métrica por subtipo.
+3. **Se mide la tasa de alarma por subtipo** además de la global, porque la métrica global puede esconder un subtipo
+   que falla:
+   - **`smoke_only` (27 %), hipótesis: es el caso difícil.** El humo sin llama se confunde con niebla, nubes o polvo.
+     Los resultados la confirman ([04](04_results.md)): en test se detecta un 87–91 % frente al 94–96 % de
+     `fire_only` y el 99 % de `fire_and_smoke`.
+   - **`fire_only` es la minoritaria (5 %):** en test son ~220 imágenes, así que cada una mueve su tasa ~0,45 puntos.
+     Diferencias de uno o dos puntos entre modelos en este subtipo no son significativas.
+   - En `background`, la tasa de alarma son las **falsas alarmas**.
 4. Los splits ya vienen dados y son consistentes, así que se usan tal cual.

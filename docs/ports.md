@@ -29,7 +29,7 @@ Stack `deploy/serving` (proyecto Compose `fire-serving`, red `fire-serving_defau
 |---|---|---|---|
 | navegador (host) | `mlflow` | `http://localhost:5000` | ver runs, comparar, registro de modelos |
 | navegador (host) | `rustfs` | `http://localhost:9001/rustfs/console/` | ver buckets y ficheros |
-| `train.py` (host, futuro) | `mlflow` | `MLFLOW_TRACKING_URI=http://localhost:5000` | registrar runs y modelos (también los ficheros, vía proxy) |
+| `train.py`, `import_results.py` (host) | `mlflow` | `MLFLOW_TRACKING_URI=http://localhost:5000` | registrar runs y modelos (también los ficheros, vía proxy) |
 | `mlflow` | `postgres` | `postgresql://…@postgres:5432/mlflow` | metadatos |
 | `mlflow` | `rustfs` | `MLFLOW_S3_ENDPOINT_URL=http://rustfs:9000` | ficheros, bucket `mlflow` |
 | `create_bucket.sh` (contenedor `aws-cli` temporal) | `rustfs` | `http://rustfs:9000` dentro de la red | crear buckets |
@@ -61,7 +61,7 @@ Stack `deploy/serving` (proyecto Compose `fire-serving`, red `fire-serving_defau
 
 ## Puertos previstos (aún no existen)
 
-Según el plan de [05_deployment.md](05_deployment.md):
+Según la [hoja de ruta](../README.md#hoja-de-ruta):
 
 | servicio | puerto | publicado | uso |
 |---|---:|---|---|
